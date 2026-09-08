@@ -1,0 +1,12 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Customer Bill - {{ $voucher->bill_no ?: $voucher->sr_no }}</title>@include('reports._print-style')</head><body>
+<div class="print-toolbar"><button onclick="history.back()">Back</button><button class="primary" onclick="window.print()">Print / Save PDF</button></div>
+<div class="paper">
+    <div class="company"><h1>{{ $voucher->transportCompany?->name ?: 'XYZ TRANSPORT' }}</h1><p>Goods Transport Service</p></div>
+    <div class="doc-title">TRANSPORT BILL</div>
+    <table class="meta"><tr><td class="label">Bill No.</td><td>{{ $voucher->bill_no ?: 'Voucher-'.$voucher->sr_no }}</td><td class="label">LR Date</td><td>{{ optional($voucher->lr_date)->format('d-m-Y') }}</td></tr><tr><td class="label">Customer</td><td colspan="3" class="strong">{{ $voucher->customer?->name }}</td></tr><tr><td class="label">Address</td><td colspan="3">{{ $voucher->customer?->address ?: '-' }}</td></tr><tr><td class="label">GST No.</td><td>{{ $voucher->customer?->gst_no ?: '-' }}</td><td class="label">SO / Ref No.</td><td>{{ $voucher->so_ref_no ?: '-' }}</td></tr></table>
+    <table class="grid"><thead><tr><th>LR No.</th><th>Vehicle Type</th><th>Lorry No.</th><th>From</th><th>To</th><th class="num">Freight</th><th class="num">GST</th></tr></thead><tbody><tr><td>{{ $voucher->lr_no ?: '-' }}</td><td>{{ $voucher->vehicleType?->name ?: '-' }}</td><td>{{ $voucher->lorry_no ?: '-' }}</td><td>{{ $voucher->from_place ?: '-' }}</td><td>{{ $voucher->to_place ?: '-' }}</td><td class="num">₹{{ number_format((float)$voucher->customer_freight,2) }}</td><td class="num">₹{{ number_format((float)$voucher->gst,2) }}</td></tr></tbody></table>
+    @php $paid=(float)($voucher->customer_paid_total??0);$total=(float)$voucher->customer_freight;$balance=max(0,$total-$paid); @endphp
+    <table class="totals"><tr><td>Customer Freight</td><td class="num">₹{{ number_format($total,2) }}</td></tr><tr><td>Paid Amount</td><td class="num">₹{{ number_format($paid,2) }}</td></tr><tr><td>Balance</td><td class="num balance">₹{{ number_format($balance,2) }}</td></tr></table>
+    @if($voucher->remarks)<div style="margin-top:18px;font-size:11px"><b>Remarks:</b> {{ $voucher->remarks }}</div>@endif
+    <div class="footer">This bill is generated from the transport voucher system. Supplier costing and internal profit are intentionally not shown. GST is recorded separately and is not included in outstanding until its final business rule is confirmed.</div>
+</div></body></html>
