@@ -6,7 +6,7 @@
 .master-card{border:1px solid #cbd5e1;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05)}
 .master-table{width:100%;border-collapse:collapse;font-size:.86rem}.master-table th{background:#f1f5f9;border-bottom:1px solid #94a3b8;padding:.65rem .75rem;text-align:left;font-size:.72rem;text-transform:uppercase;color:#475569}.master-table td{border-bottom:1px solid #e2e8f0;padding:.62rem .75rem}.master-table tr:hover td{background:#ecfdf5}
 .master-input{height:2.5rem;width:100%;border:1px solid #94a3b8;padding:0 .65rem;outline:none;background:white}.master-input:focus,.master-textarea:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.master-textarea{width:100%;border:1px solid #94a3b8;padding:.6rem;outline:none;min-height:78px}
-.master-modal{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:1rem}.master-modal-card{width:min(760px,96vw);max-height:90vh;overflow:auto;background:#fff;border:1px solid #64748b;box-shadow:0 24px 70px rgba(15,23,42,.35)}
+.master-modal{position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:1rem}.master-modal.hidden{display:none!important}.master-modal-card{width:min(760px,96vw);max-height:90vh;overflow:auto;background:#fff;border:1px solid #64748b;box-shadow:0 24px 70px rgba(15,23,42,.35)}
 </style>
 @endpush
 
@@ -39,6 +39,8 @@
                         <td>{{ $item->code ?: '-' }}</td><td class="font-bold text-slate-900">{{ $item->name }}</td><td>{{ $item->phone ?: '-' }}</td><td>{{ $item->gst_no ?: '-' }}</td><td>₹{{ number_format((float)$item->opening_balance,2) }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @elseif($type==='vehicle-types')
                         <td class="font-bold">{{ $item->name }}</td><td>{{ $item->description ?: '-' }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
+                    @elseif($type==='gst-rates')
+                        <td class="font-bold">{{ $item->name }}</td><td>{{ rtrim(rtrim(number_format((float)$item->rate,2,'.',''),'0'),'.') }}%</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @else
                         <td class="font-bold">{{ $item->name }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @endif
@@ -68,7 +70,7 @@
                     @else
                         <label class="{{ !empty($field['wide'])?'md:col-span-2':'' }}"><span class="mb-1 block text-xs font-black uppercase tracking-wide text-slate-600">{{ $field['label'] }} @if(!empty($field['required']))<span class="text-red-600">*</span>@endif</span>
                             @if($field['type']==='textarea')
-                                <textarea name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-textarea" {{ !empty($field['required'])?'required':'' }}></textarea>
+                                <textarea name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-textarea" {{ !empty($field['required'])?'required':'' }}>{{ $field['default'] ?? '' }}</textarea>
                             @else
                                 <input type="{{ $field['type'] }}" name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input" @if($field['type']==='number') step="0.01" @endif {{ !empty($field['required'])?'required':'' }}>
                             @endif

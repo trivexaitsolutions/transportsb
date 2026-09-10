@@ -12,7 +12,7 @@ class Voucher extends Model
         'sr_no', 'voucher_day_id', 'transport_company_id', 'lr_date', 'lr_no', 'vehicle_type_id',
         'lorry_no', 'so_ref_no', 'from_place', 'to_place', 'supplier_id',
         'supplier_freight', 'supplier_advance', 'customer_id', 'customer_freight',
-        'hamali_loading', 'hamali_unloading', 'bill_no', 'gst', 'remarks', 'created_by',
+        'hamali_loading', 'hamali_unloading', 'other_charges', 'bill_no', 'gst_rate_id', 'gst', 'remarks', 'created_by',
     ];
 
     protected function casts(): array
@@ -24,6 +24,7 @@ class Voucher extends Model
             'customer_freight' => 'decimal:2',
             'hamali_loading' => 'decimal:2',
             'hamali_unloading' => 'decimal:2',
+            'other_charges' => 'decimal:2',
             'gst' => 'decimal:2',
         ];
     }
@@ -52,6 +53,11 @@ class Voucher extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function gstRate(): BelongsTo
+    {
+        return $this->belongsTo(GstRate::class);
     }
 
     public function supplierPayments(): HasMany

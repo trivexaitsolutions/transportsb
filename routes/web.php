@@ -23,7 +23,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('vouchers')->name('vouchers.')->group(function () {
         Route::get('/', [VoucherController::class, 'index'])->name('index');
-        Route::get('/day', [VoucherController::class, 'day'])->name('day');
+        Route::get('/range', [VoucherController::class, 'range'])->name('range');
         Route::post('/save', [VoucherController::class, 'save'])->name('save');
         Route::get('/options', [VoucherController::class, 'options'])->name('options');
         Route::get('/{voucher}/payments/{type}', [VoucherController::class, 'payments'])->name('payments');
@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('masters')->name('masters.')->group(function () {
+        Route::get('/settings/print', [MasterController::class, 'settings'])->name('settings');
+        Route::put('/settings/print', [MasterController::class, 'updateSettings'])->name('settings.update');
         Route::get('/{type}', [MasterController::class, 'index'])->name('index');
         Route::post('/{type}', [MasterController::class, 'store'])->name('store');
         Route::put('/{type}/{id}', [MasterController::class, 'update'])->name('update');
@@ -41,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('reports')->name('reports.')->group(function () {
         Route::get('/vouchers', [ReportController::class, 'voucherRegister'])->name('vouchers');
         Route::get('/customer-ledger', [ReportController::class, 'customerLedger'])->name('customer-ledger');
+        Route::post('/customer-ledger/{customer}/print-selected', [ReportController::class, 'customerLedgerPrint'])->name('customer-ledger.print-selected');
         Route::get('/supplier-ledger', [ReportController::class, 'supplierLedger'])->name('supplier-ledger');
         Route::get('/outstanding', [ReportController::class, 'outstanding'])->name('outstanding');
         Route::get('/profit', [ReportController::class, 'profit'])->name('profit');

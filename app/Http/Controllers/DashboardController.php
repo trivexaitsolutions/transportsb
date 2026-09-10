@@ -24,6 +24,10 @@ class DashboardController extends Controller
 
         $customerOutstanding = (float) Customer::sum('opening_balance')
             + (float) Voucher::sum('customer_freight')
+            + (float) Voucher::sum('hamali_loading')
+            + (float) Voucher::sum('hamali_unloading')
+            + (float) Voucher::sum('other_charges')
+            + (float) Voucher::sum('gst')
             - (float) CustomerPayment::sum('amount');
 
         $supplierOutstanding = (float) Supplier::sum('opening_balance')

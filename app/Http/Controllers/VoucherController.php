@@ -4,12 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\CustomerPayment;
+use App\Models\GstRate;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Models\TransportCompany;
 use App\Models\VehicleType;
 use App\Models\Voucher;
-use App\Models\VoucherDay;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,71 +22,41 @@ class VoucherController extends Controller
 {
     public function index(Request $request): View
     {
-        $validated = $request->validate([
-            'date' => ['nullable', 'date_format:Y-m-d'],
-        ]);
+        $today = now()->toDateString();
+        $from = $request->string('from_date')->toString() ?: $today;
+        $to = $request->string('to_date')->toString() ?: $today;
 
-        $date = $validated['date'] ?? now()->toDateString();
-
-        $selectedDay = VoucherDay::query()
-            ->whereDate('entry_date', $date)
-            ->first();
-
-        $initialDay = $selectedDay
-            ? $this->dayPayload($selectedDay)
-            : $this->newDayPayload($this->nextDayNumber(), $date);
+        if (! $this->validDateRange($from, $to)) {
+            $from = $today;
+            $to = $today;
+        }
 
         return view('vouchers.index', [
-            'initialDay' => $initialDay,
+            'initialRange' => $this->rangePayload($from, $to),
         ]);
     }
 
-    public function day(Request $request): JsonResponse
+    public function range(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'day_number' => ['required', 'integer', 'min:1', 'max:99999'],
+            'from_date' => ['required', 'date_format:Y-m-d'],
+            'to_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:from_date'],
         ]);
 
-        $dayNumber = (int) $validated['day_number'];
-
-        $day = VoucherDay::query()
-            ->where('day_number', $dayNumber)
-            ->first();
-
-        if ($day) {
-            return response()->json([
-                'day' => $this->dayPayload($day),
-            ]);
-        }
-
-        $nextDayNumber = $this->nextDayNumber();
-
-        if ($dayNumber !== $nextDayNumber) {
-            throw ValidationException::withMessages([
-                'day_number' => sprintf(
-                    'Voucher Number %05d does not exist. The next new Voucher Number is %05d.',
-                    $dayNumber,
-                    $nextDayNumber
-                ),
-            ]);
-        }
-
         return response()->json([
-            'day' => $this->newDayPayload(
-                $nextDayNumber,
-                now()->toDateString()
-            ),
+            'range' => $this->rangePayload($validated['from_date'], $validated['to_date']),
         ]);
     }
 
     public function save(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'day_number' => ['required', 'integer', 'min:1', 'max:99999'],
-            'entry_date' => ['required', 'date'],
+            'from_date' => ['required', 'date_format:Y-m-d'],
+            'to_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:from_date'],
             'rows' => ['array'],
             'rows.*.id' => ['nullable', 'integer'],
             'rows.*.transport_company_id' => ['required', 'integer', 'exists:transport_companies,id'],
+            'rows.*.lr_date' => ['required', 'date_format:Y-m-d'],
             'rows.*.lr_no' => ['nullable', 'string', 'max:100'],
             'rows.*.vehicle_type_id' => ['nullable', 'integer', 'exists:vehicle_types,id'],
             'rows.*.lorry_no' => ['nullable', 'string', 'max:100'],
@@ -100,110 +70,49 @@ class VoucherController extends Controller
             'rows.*.customer_freight' => ['nullable', 'numeric', 'min:0'],
             'rows.*.hamali_loading' => ['nullable', 'numeric', 'min:0'],
             'rows.*.hamali_unloading' => ['nullable', 'numeric', 'min:0'],
-            'rows.*.bill_no' => ['nullable', 'string', 'max:100'],
-            'rows.*.gst' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.other_charges' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.gst_rate_id' => ['nullable', 'integer', 'exists:gst_rates,id'],
             'rows.*.remarks' => ['nullable', 'string', 'max:2000'],
             'deleted_ids' => ['array'],
             'deleted_ids.*' => ['integer', 'exists:vouchers,id'],
         ]);
 
-        $day = DB::transaction(function () use ($validated, $request): VoucherDay {
-            $dayNumber = (int) $validated['day_number'];
-
-            $day = VoucherDay::query()
-                ->where('day_number', $dayNumber)
-                ->lockForUpdate()
-                ->first();
-
-            // Voucher Number owns its date. Existing voucher days always keep
-            // their stored date; a brand-new voucher day always uses today.
-            // The browser only displays this value and cannot change it.
-            $entryDate = $day
-                ? $day->entry_date->toDateString()
-                : now()->toDateString();
-
-            if (! $day) {
-                if (VoucherDay::query()->whereDate('entry_date', $entryDate)->exists()) {
-                    throw ValidationException::withMessages([
-                        'day_number' => 'A Voucher Number already exists for today.',
-                    ]);
-                }
-
-                $lastDay = VoucherDay::query()
-                    ->orderByDesc('day_number')
-                    ->lockForUpdate()
-                    ->first();
-
-                $expectedDayNumber = $lastDay
-                    ? ((int) $lastDay->day_number + 1)
-                    : 1;
-
-                if ($dayNumber !== $expectedDayNumber) {
-                    throw ValidationException::withMessages([
-                        'day_number' => sprintf(
-                            'The next new Voucher Number must be %05d.',
-                            $expectedDayNumber
-                        ),
-                    ]);
-                }
-
-                $day = VoucherDay::query()->create([
-                    'day_number' => $expectedDayNumber,
-                    'entry_date' => $entryDate,
-                    'created_by' => $request->user()?->id,
-                ]);
-            }
-
-            // Keep the legacy lr_date column synchronized because existing reports,
-            // ledgers and PDFs intentionally continue to read that column.
-            Voucher::query()
-                ->where('voucher_day_id', $day->id)
-                ->update(['lr_date' => $entryDate]);
-
-            $existingRows = Voucher::query()
-                ->where('voucher_day_id', $day->id)
-                ->lockForUpdate()
-                ->get()
-                ->keyBy('id');
-
-            $submittedExistingIds = collect($validated['rows'] ?? [])
-                ->pluck('id')
-                ->filter()
-                ->map(fn ($id): int => (int) $id);
-
-            $invalidSubmittedIds = $submittedExistingIds
-                ->diff($existingRows->keys());
-
-            if ($invalidSubmittedIds->isNotEmpty()) {
+        foreach ($validated['rows'] ?? [] as $index => $row) {
+            $rowDate = (string) ($row['lr_date'] ?? '');
+            if ($rowDate < $validated['from_date'] || $rowDate > $validated['to_date']) {
                 throw ValidationException::withMessages([
-                    'rows' => 'One or more voucher rows do not belong to the selected Voucher Number.',
+                    'rows.'. $index .'.lr_date' => 'LR Date must be within the selected From Date and To Date range.',
                 ]);
             }
+        }
 
-            $deletedIds = collect($validated['deleted_ids'] ?? [])
-                ->map(fn ($id): int => (int) $id);
+        DB::transaction(function () use ($validated, $request): void {
+            $zeroRateId = GstRate::query()->where('rate', 0)->value('id');
+            $gstRates = GstRate::query()->pluck('rate', 'id');
 
-            $invalidDeletedIds = $deletedIds
-                ->diff($existingRows->keys());
+            $existingIds = collect($validated['rows'] ?? [])->pluck('id')->filter()->map(fn ($id) => (int) $id);
+            $existingRows = Voucher::query()->whereIn('id', $existingIds)->lockForUpdate()->get()->keyBy('id');
 
-            if ($invalidDeletedIds->isNotEmpty()) {
-                throw ValidationException::withMessages([
-                    'deleted_ids' => 'One or more deleted voucher rows do not belong to the selected Voucher Number.',
-                ]);
+            $invalidIds = $existingIds->diff($existingRows->keys());
+            if ($invalidIds->isNotEmpty()) {
+                throw ValidationException::withMessages(['rows' => 'One or more voucher rows no longer exist. Reload and try again.']);
             }
 
+            $deletedIds = collect($validated['deleted_ids'] ?? [])->map(fn ($id) => (int) $id);
             if ($deletedIds->isNotEmpty()) {
-                Voucher::query()
-                    ->where('voucher_day_id', $day->id)
-                    ->whereIn('id', $deletedIds)
-                    ->delete();
+                Voucher::query()->whereIn('id', $deletedIds)->delete();
             }
 
             foreach ($validated['rows'] ?? [] as $row) {
+                $customerFreight = $this->numericValue($row['customer_freight'] ?? null);
+                $gstRateId = $row['gst_rate_id'] ?? $zeroRateId;
+                $gstRate = (float) ($gstRates[$gstRateId] ?? 0);
+                $gstAmount = round($customerFreight * $gstRate / 100, 2);
+
                 $payload = [
-                    'voucher_day_id' => $day->id,
+                    'voucher_day_id' => null,
                     'transport_company_id' => $row['transport_company_id'],
-                    'lr_date' => $entryDate,
+                    'lr_date' => $row['lr_date'],
                     'lr_no' => $this->nullableText($row['lr_no'] ?? null),
                     'vehicle_type_id' => $row['vehicle_type_id'] ?? null,
                     'lorry_no' => $this->nullableText($row['lorry_no'] ?? null),
@@ -214,39 +123,44 @@ class VoucherController extends Controller
                     'supplier_freight' => $this->numericValue($row['supplier_freight'] ?? null),
                     'supplier_advance' => $this->numericValue($row['supplier_advance'] ?? null),
                     'customer_id' => $row['customer_id'],
-                    'customer_freight' => $this->numericValue($row['customer_freight'] ?? null),
+                    'customer_freight' => $customerFreight,
                     'hamali_loading' => $this->numericValue($row['hamali_loading'] ?? null),
                     'hamali_unloading' => $this->numericValue($row['hamali_unloading'] ?? null),
-                    'bill_no' => $this->nullableText($row['bill_no'] ?? null),
-                    'gst' => $this->numericValue($row['gst'] ?? null),
+                    'other_charges' => $this->numericValue($row['other_charges'] ?? null),
+                    'gst_rate_id' => $gstRateId,
+                    'gst' => $gstAmount,
                     'remarks' => $this->nullableText($row['remarks'] ?? null),
                 ];
 
                 if (! empty($row['id'])) {
                     $voucher = $existingRows->get((int) $row['id']);
-                    $voucher?->update($payload);
+                    if ($voucher) {
+                        if (! $voucher->bill_no) {
+                            $payload['bill_no'] = $this->billNumber((int) $voucher->sr_no);
+                        }
+                        $voucher->update($payload);
+                    }
                     continue;
                 }
 
                 $nextSr = ((int) Voucher::query()->lockForUpdate()->max('sr_no')) + 1;
                 $payload['sr_no'] = $nextSr;
+                $payload['bill_no'] = $this->billNumber($nextSr);
                 $payload['created_by'] = $request->user()?->id;
                 Voucher::query()->create($payload);
             }
-
-            return $day->fresh();
         });
 
         return response()->json([
             'message' => 'Voucher entries saved successfully.',
-            'day' => $this->dayPayload($day),
+            'range' => $this->rangePayload($validated['from_date'], $validated['to_date']),
         ]);
     }
 
     public function options(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'type' => ['required', Rule::in(['companies', 'customers', 'suppliers', 'vehicle-types'])],
+            'type' => ['required', Rule::in(['companies', 'customers', 'suppliers', 'vehicle-types', 'gst-rates'])],
             'search' => ['nullable', 'string', 'max:100'],
         ]);
 
@@ -257,33 +171,34 @@ class VoucherController extends Controller
             'customers' => Customer::query()->where('is_active', true),
             'suppliers' => Supplier::query()->where('is_active', true),
             'vehicle-types' => VehicleType::query()->where('is_active', true),
+            'gst-rates' => GstRate::query()->where('is_active', true),
         };
 
         if ($search !== '') {
             $query->where(function (Builder $q) use ($search, $validated) {
                 $q->where('name', 'like', '%'.$search.'%');
-
                 if (in_array($validated['type'], ['customers', 'suppliers'], true)) {
-                    $q->orWhere('code', 'like', '%'.$search.'%')
-                        ->orWhere('phone', 'like', '%'.$search.'%');
+                    $q->orWhere('code', 'like', '%'.$search.'%')->orWhere('phone', 'like', '%'.$search.'%');
                 }
             });
         }
 
-        $items = $query->orderBy('name')->limit(100)->get()->map(function ($item) use ($validated) {
-            $subtitle = null;
-
-            if (in_array($validated['type'], ['customers', 'suppliers'], true)) {
-                $parts = array_filter([$item->code, $item->phone]);
-                $subtitle = implode(' · ', $parts);
-            }
-
-            return [
+        if ($validated['type'] === 'gst-rates') {
+            $items = $query->orderBy('rate')->limit(100)->get()->map(fn ($item) => [
                 'id' => $item->id,
                 'name' => $item->name,
-                'subtitle' => $subtitle,
-            ];
-        });
+                'subtitle' => rtrim(rtrim(number_format((float) $item->rate, 2, '.', ''), '0'), '.').'%',
+                'rate' => (float) $item->rate,
+            ]);
+        } else {
+            $items = $query->orderBy('name')->limit(100)->get()->map(function ($item) use ($validated) {
+                $subtitle = null;
+                if (in_array($validated['type'], ['customers', 'suppliers'], true)) {
+                    $subtitle = implode(' · ', array_filter([$item->code, $item->phone]));
+                }
+                return ['id' => $item->id, 'name' => $item->name, 'subtitle' => $subtitle];
+            });
+        }
 
         return response()->json(['items' => $items]);
     }
@@ -291,16 +206,13 @@ class VoucherController extends Controller
     public function payments(Voucher $voucher, string $type): JsonResponse
     {
         abort_unless(in_array($type, ['supplier', 'customer'], true), 404);
-
-        if ($type === 'supplier') {
-            $items = $voucher->supplierPayments()->orderBy('payment_date')->orderBy('id')->get();
-        } else {
-            $items = $voucher->customerPayments()->orderBy('payment_date')->orderBy('id')->get();
-        }
+        $items = $type === 'supplier'
+            ? $voucher->supplierPayments()->orderBy('payment_date')->orderBy('id')->get()
+            : $voucher->customerPayments()->orderBy('payment_date')->orderBy('id')->get();
 
         return response()->json([
             'voucher' => $this->serializeVoucher($voucher->fresh([
-                'transportCompany', 'vehicleType', 'supplier', 'customer',
+                'transportCompany', 'vehicleType', 'supplier', 'customer', 'gstRate',
             ])->loadSum('supplierPayments as supplier_payment_total', 'amount')
               ->loadSum('customerPayments as customer_paid_total', 'amount')),
             'payments' => $items->map(fn ($payment) => [
@@ -331,25 +243,21 @@ class VoucherController extends Controller
         if ($type === 'supplier') {
             $already = (float) $voucher->supplierPayments()->sum('amount');
             $balance = max(0, (float) $voucher->supplier_freight - (float) $voucher->supplier_advance - $already);
-
             if ($amount > $balance + 0.0001) {
-                return response()->json([
-                    'message' => 'Payment cannot be greater than supplier balance ₹'.number_format($balance, 2).'.',
-                ], 422);
+                return response()->json(['message' => 'Payment cannot be greater than supplier balance ₹'.number_format($balance, 2).'.'], 422);
             }
-
             $voucher->supplierPayments()->create($validated + ['created_by' => $request->user()?->id]);
         } else {
             $already = (float) $voucher->customerPayments()->sum('amount');
-            $receivable = (float) $voucher->customer_freight;
+            $receivable = (float) $voucher->customer_freight
+                + (float) $voucher->hamali_loading
+                + (float) $voucher->hamali_unloading
+                + (float) $voucher->other_charges
+                + (float) $voucher->gst;
             $balance = max(0, $receivable - $already);
-
             if ($amount > $balance + 0.0001) {
-                return response()->json([
-                    'message' => 'Payment cannot be greater than customer balance ₹'.number_format($balance, 2).'.',
-                ], 422);
+                return response()->json(['message' => 'Payment cannot be greater than customer balance ₹'.number_format($balance, 2).'.'], 422);
             }
-
             $voucher->customerPayments()->create($validated + ['created_by' => $request->user()?->id]);
         }
 
@@ -359,63 +267,35 @@ class VoucherController extends Controller
     public function deletePayment(Voucher $voucher, string $type, int $payment): JsonResponse
     {
         abort_unless(in_array($type, ['supplier', 'customer'], true), 404);
-
         $model = $type === 'supplier'
             ? SupplierPayment::query()->where('voucher_id', $voucher->id)->findOrFail($payment)
             : CustomerPayment::query()->where('voucher_id', $voucher->id)->findOrFail($payment);
-
         $model->delete();
-
         return $this->payments($voucher->fresh(), $type);
     }
 
-    private function dayPayload(VoucherDay $day): array
+    private function rangePayload(string $from, string $to): array
     {
+        $zero = GstRate::query()->where('rate', 0)->first();
+
         return [
-            'exists' => true,
-            'id' => $day->id,
-            'day_number' => (int) $day->day_number,
-            'day_number_formatted' => sprintf('%05d', $day->day_number),
-            'entry_date' => optional($day->entry_date)->format('Y-m-d'),
-            'rows' => $this->vouchersForDay($day),
+            'from_date' => $from,
+            'to_date' => $to,
+            'default_gst_rate_id' => $zero?->id,
+            'default_gst_rate_name' => $zero?->name ?? '0%',
+            'default_gst_rate' => (float) ($zero?->rate ?? 0),
+            'rows' => Voucher::query()
+                ->whereBetween('lr_date', [$from, $to])
+                ->with(['transportCompany', 'vehicleType', 'supplier', 'customer', 'gstRate'])
+                ->withSum('supplierPayments as supplier_payment_total', 'amount')
+                ->withSum('customerPayments as customer_paid_total', 'amount')
+                ->orderBy('lr_date')
+                ->orderBy('sr_no')
+                ->get()
+                ->map(fn (Voucher $voucher) => $this->serializeVoucher($voucher))
+                ->values()
+                ->all(),
         ];
-    }
-
-    private function newDayPayload(int $dayNumber, string $entryDate): array
-    {
-        return [
-            'exists' => false,
-            'id' => null,
-            'day_number' => $dayNumber,
-            'day_number_formatted' => sprintf('%05d', $dayNumber),
-            'entry_date' => $entryDate,
-            'rows' => [],
-        ];
-    }
-
-    private function nextDayNumber(): int
-    {
-        return ((int) VoucherDay::query()->max('day_number')) + 1;
-    }
-
-    private function vouchersForDay(VoucherDay $day): array
-    {
-        return Voucher::query()
-            ->where(function (Builder $query) use ($day) {
-                $query->where('voucher_day_id', $day->id)
-                    ->orWhere(function (Builder $fallback) use ($day) {
-                        $fallback->whereNull('voucher_day_id')
-                            ->whereDate('lr_date', $day->entry_date);
-                    });
-            })
-            ->with(['transportCompany', 'vehicleType', 'supplier', 'customer'])
-            ->withSum('supplierPayments as supplier_payment_total', 'amount')
-            ->withSum('customerPayments as customer_paid_total', 'amount')
-            ->orderBy('sr_no')
-            ->get()
-            ->map(fn (Voucher $voucher) => $this->serializeVoucher($voucher))
-            ->values()
-            ->all();
     }
 
     private function serializeVoucher(Voucher $voucher): array
@@ -425,7 +305,12 @@ class VoucherController extends Controller
         $supplierFreight = (float) $voucher->supplier_freight;
         $supplierAdvance = (float) $voucher->supplier_advance;
         $customerFreight = (float) $voucher->customer_freight;
+        $hamaliLoading = (float) $voucher->hamali_loading;
+        $hamaliUnloading = (float) $voucher->hamali_unloading;
+        $otherCharges = (float) $voucher->other_charges;
         $gst = (float) $voucher->gst;
+        $customerAmount = $customerFreight + $hamaliLoading + $hamaliUnloading + $otherCharges;
+        $invoiceTotal = $customerAmount + $gst;
 
         return [
             'id' => $voucher->id,
@@ -450,20 +335,37 @@ class VoucherController extends Controller
             'customer_name' => $voucher->customer?->name,
             'customer_freight' => $customerFreight,
             'customer_paid' => $customerPaid,
-            'customer_balance' => max(0, $customerFreight - $customerPaid),
-            'hamali_loading' => (float) $voucher->hamali_loading,
-            'hamali_unloading' => (float) $voucher->hamali_unloading,
+            'customer_balance' => max(0, $invoiceTotal - $customerPaid),
+            'hamali_loading' => $hamaliLoading,
+            'hamali_unloading' => $hamaliUnloading,
+            'other_charges' => $otherCharges,
+            'customer_amount' => $customerAmount,
             'profit' => $customerFreight - $supplierFreight,
-            'bill_no' => $voucher->bill_no,
+            'bill_no' => $voucher->bill_no ?: $this->billNumber((int) $voucher->sr_no),
+            'gst_rate_id' => $voucher->gst_rate_id,
+            'gst_rate_name' => $voucher->gstRate?->name ?: '0%',
+            'gst_rate' => (float) ($voucher->gstRate?->rate ?? 0),
             'gst' => $gst,
+            'invoice_total' => $invoiceTotal,
             'remarks' => $voucher->remarks,
         ];
+    }
+
+    private function billNumber(int $srNo): string
+    {
+        return 'BILL-'.str_pad((string) $srNo, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function validDateRange(string $from, string $to): bool
+    {
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)
+            && preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)
+            && $from <= $to;
     }
 
     private function nullableText(?string $value): ?string
     {
         $value = trim((string) $value);
-
         return $value === '' ? null : $value;
     }
 
@@ -472,7 +374,6 @@ class VoucherController extends Controller
         if ($value === null || trim((string) $value) === '') {
             return 0.0;
         }
-
         return (float) $value;
     }
 }

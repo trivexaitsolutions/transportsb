@@ -1,22 +1,19 @@
 @extends('layouts.app')
 
-@section('title', 'Voucher Day Book | XYZ Transport')
+@section('title', 'Voucher Entry | XYZ Transport')
 
 @push('styles')
 <style>
     .app-main{padding:0!important}
     .voucher-workspace{position:fixed;inset-inline:0;top:3.5rem;bottom:0;z-index:40;display:flex;flex-direction:column;background:#f1f5f9}
     .voucher-header{flex:0 0 auto;border-bottom:1px solid #cbd5e1;background:#fff;padding:.72rem 1.25rem;box-shadow:0 1px 2px rgba(15,23,42,.05)}
-    .voucher-day-number{height:2.5rem;width:8rem;border:1px solid #cbd5e1;background:#fffbeb;padding:0 .75rem;text-align:center;font-size:1.08rem;font-weight:800;letter-spacing:.18em;outline:none}
-    .voucher-day-number:focus{border-color:#047857;background:#fff;box-shadow:0 0 0 2px #d1fae5}
-    .voucher-date{height:2.5rem;width:11rem;border:1px solid #cbd5e1;padding:0 .75rem;font-weight:700;background:#f8fafc;color:#0f172a;display:flex;align-items:center;cursor:default;user-select:none}
-    .day-state{display:inline-flex;height:2rem;align-items:center;border:1px solid #e2e8f0;background:#f8fafc;padding:0 .75rem;font-size:.72rem;font-weight:800;color:#475569}
-    .day-state.existing{border-color:#bbf7d0;background:#ecfdf5;color:#047857}
+    .voucher-filter-date{height:2.5rem;width:11rem;border:1px solid #cbd5e1;background:#fffbeb;padding:0 .65rem;font-weight:800;color:#0f172a;outline:none}
+    .voucher-filter-date:focus{border-color:#047857;background:#fff;box-shadow:0 0 0 2px #d1fae5}
     .status-msg{min-width:160px;text-align:right;font-size:.75rem;font-weight:700;color:#64748b}.status-msg.ok{color:#047857}.status-msg.error{color:#b91c1c}
     .voucher-help{margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.2rem 1.15rem;font-size:.69rem;color:#64748b}.voucher-help strong{color:#475569}
     .voucher-grid-wrap{min-height:0;flex:1;padding:.75rem 1rem .65rem}.voucher-grid-card{display:flex;height:100%;min-height:0;flex-direction:column;border:1px solid #cbd5e1;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05)}
     .transport-grid-scroll{min-height:0;flex:1;overflow:auto;background:#fff;position:relative}
-    .app-transport-table{width:3275px;min-width:3275px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px}
+    .app-transport-table{width:3790px;min-width:3790px;border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:13px}
     .app-transport-table th{position:sticky;top:0;z-index:8;height:38px;background:#e2e8f0;border-right:1px solid #94a3b8;border-bottom:1px solid #64748b;padding:3px 5px;text-align:center;vertical-align:middle;font-size:10.5px;line-height:1.1;font-weight:900;color:#0f172a;white-space:normal;text-transform:uppercase;letter-spacing:.025em}
     .app-transport-table td{height:35px;border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;background:#fff;padding:0;vertical-align:middle}
     .app-transport-table tr.is-selected td{background:#fef9c3}
@@ -27,6 +24,7 @@
     .cell-button span{overflow:hidden;text-overflow:ellipsis}.cell-button.empty{color:#94a3b8;font-weight:600}.cell-button::after{content:'▾';margin-left:auto;color:#64748b;font-size:10px}
     .computed{height:34px;display:flex;align-items:center;justify-content:flex-end;padding:0 6px;background:#f8fafc;font-weight:700;font-variant-numeric:tabular-nums;color:#334155}
     .payment-button{height:34px;width:100%;border:0;background:#eff6ff;color:#1d4ed8;text-decoration:underline;text-underline-offset:2px;text-align:right;padding:0 6px;font-weight:800;cursor:pointer}.payment-button:focus{outline:2px solid #2563eb;outline-offset:-2px;background:#dbeafe}
+    .row-action{height:28px;min-width:58px;border:1px solid #94a3b8;background:#fff;padding:0 7px;font-size:11px;font-weight:800}.row-action:hover,.row-action:focus{outline:none;border-color:#047857;background:#ecfdf5;color:#065f46}.row-action.delete{border-color:#fecaca;color:#b91c1c}.row-action.delete:hover,.row-action.delete:focus{background:#fef2f2;border-color:#ef4444}
     .profit-cell{background:#ecfdf5;color:#047857;font-weight:900}.negative{color:#b91c1c!important;background:#fef2f2!important}
     .sticky-sr{position:sticky;left:0;z-index:5!important}.sticky-company{position:sticky;left:62px;z-index:5!important}.app-transport-table th.sticky-sr,.app-transport-table th.sticky-company{z-index:12!important}.app-transport-table td.sticky-sr,.app-transport-table td.sticky-company{background:inherit}
     .voucher-footer{flex:0 0 auto;border-top:1px solid #cbd5e1;background:#f8fafc;padding:.55rem .8rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;font-size:.76rem;color:#475569}.voucher-footer-stats{display:flex;align-items:center;gap:1.2rem}.voucher-footer b{color:#0f172a}.footer-actions{display:flex;gap:.5rem;align-items:center}
@@ -48,22 +46,20 @@
             <div class="voucher-header-left flex items-center gap-5">
                 <div>
                     <div class="text-lg font-bold text-slate-950">Voucher Entry</div>
-                    <div class="mt-0.5 text-xs text-slate-500">Day-wise Excel entry for transport jobs</div>
+                    <div class="mt-0.5 text-xs text-slate-500">Date-wise Excel entry for transport jobs</div>
                 </div>
 
                 <div class="h-10 w-px bg-slate-200"></div>
 
                 <div>
-                    <label for="voucherDayNumber" class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">Voucher Number</label>
-                    <input type="text" id="voucherDayNumber" inputmode="numeric" maxlength="5" autocomplete="off" class="voucher-day-number">
+                    <label for="fromDate" class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">From Date</label>
+                    <input type="date" id="fromDate" class="voucher-filter-date">
                 </div>
 
                 <div>
-                    <div class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">Date</div>
-                    <div id="voucherEntryDate" class="voucher-date" aria-label="Voucher Date"></div>
+                    <label for="toDate" class="mb-1 block text-[11px] font-bold uppercase tracking-wide text-slate-500">To Date</label>
+                    <input type="date" id="toDate" class="voucher-filter-date">
                 </div>
-
-                <div id="voucherDayState" class="day-state mt-5">New Day</div>
             </div>
 
             <div class="flex items-center gap-3">
@@ -73,10 +69,10 @@
         </div>
 
         <div class="voucher-help">
-            <span><strong>Enter on Voucher Number</strong> Load day</span>
+            <span><strong>From / To Date</strong> Change dates to load entries</span>
             <span><strong>Enter on empty selector</strong> Open selector</span>
             <span><strong>Enter on selected selector</strong> Next cell</span>
-            <span><strong>Backspace</strong> Clear complete selection</span>
+            <span><strong>Backspace</strong> Clear complete selection / date</span>
             <span><strong>← →</strong> Previous / next cell</span>
             <span><strong>↑ ↓</strong> Same column</span>
             <span><strong>Click Payment</strong> Installments</span>
@@ -91,17 +87,18 @@
             <div class="transport-grid-scroll" id="gridScroll">
                 <table class="app-transport-table" id="voucherTable">
                     <colgroup>
-                        <col style="width:62px"><col style="width:125px"><col style="width:120px"><col style="width:155px"><col style="width:145px"><col style="width:145px"><col style="width:145px"><col style="width:145px">
+                        <col style="width:62px"><col style="width:125px"><col style="width:125px"><col style="width:120px"><col style="width:155px"><col style="width:150px"><col style="width:145px"><col style="width:145px"><col style="width:145px">
                         <col style="width:205px"><col style="width:145px"><col style="width:155px"><col style="width:135px"><col style="width:150px"><col style="width:205px"><col style="width:145px"><col style="width:135px"><col style="width:135px">
-                        <col style="width:140px"><col style="width:140px"><col style="width:135px"><col style="width:125px"><col style="width:120px"><col style="width:260px">
+                        <col style="width:140px"><col style="width:140px"><col style="width:140px"><col style="width:135px"><col style="width:145px"><col style="width:120px"><col style="width:260px"><col style="width:80px"><col style="width:80px">
                     </colgroup>
                     <thead>
                     <tr>
                         <th class="sticky-sr">Sr No</th>
                         <th class="sticky-company">Transport Name</th>
+                        <th>LR Date</th>
                         <th>LR No</th>
                         <th>Vehicle Type</th>
-                        <th>Lorry</th>
+                        <th>Lorry Number</th>
                         <th>SO / Ref No</th>
                         <th>From</th>
                         <th>To</th>
@@ -116,10 +113,13 @@
                         <th>Balance</th>
                         <th>Hamali Loading</th>
                         <th>Hamali Unloading</th>
+                        <th>Other Charges</th>
                         <th>Profit</th>
                         <th>Bill No</th>
                         <th>GST</th>
                         <th>Remarks</th>
+                        <th>Delete</th>
+                        <th>Print</th>
                     </tr>
                     </thead>
                     <tbody id="voucherBody"></tbody>
@@ -198,16 +198,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const csrf = @json(csrf_token());
     const routes = {
         save: @json(route('vouchers.save')),
-        day: @json(route('vouchers.day')),
+        range: @json(route('vouchers.range')),
         options: @json(route('vouchers.options')),
         base: @json(url('/vouchers')),
+        printBase: @json(url('/reports/customer-bill')),
     };
 
-    const initialDay = @json($initialDay);
+    const initialRange = @json($initialRange);
     const workspace = document.getElementById('voucherWorkspace');
-    const dayNumberInput = document.getElementById('voucherDayNumber');
-    const dateInput = document.getElementById('voucherEntryDate');
-    const dayState = document.getElementById('voucherDayState');
+    const fromDateInput = document.getElementById('fromDate');
+    const toDateInput = document.getElementById('toDate');
     const body = document.getElementById('voucherBody');
     const gridScroll = document.querySelector('.transport-grid-scroll');
     const saveState = document.getElementById('saveState');
@@ -226,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payRemarks = document.getElementById('payRemarks');
     const payAdd = document.getElementById('payAdd');
 
-    let currentDay = null;
+    let currentRange = null;
     let rows = [];
     let deletedIds = [];
     let selectedIndex = 0;
@@ -240,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fieldOrder = [
         'transport_company_id',
+        'lr_date',
         'lr_no',
         'vehicle_type_id',
         'lorry_no',
@@ -255,8 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'customer_paid',
         'hamali_loading',
         'hamali_unloading',
-        'bill_no',
-        'gst',
+        'other_charges',
+        'gst_rate_id',
         'remarks',
     ];
 
@@ -265,6 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         vehicle_type_id: {type:'vehicle-types', title:'Select Vehicle Type', name:'vehicle_type_name'},
         supplier_id: {type:'suppliers', title:'Select Supplier / Transporter', name:'supplier_name'},
         customer_id: {type:'customers', title:'Select Customer', name:'customer_name'},
+        gst_rate_id: {type:'gst-rates', title:'Select GST', name:'gst_rate_name'},
     };
 
     function num(value) {
@@ -293,7 +295,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function blankRow() {
-        return normalizeRow({});
+        return normalizeRow({
+            lr_date: currentRange?.from_date || fromDateInput?.value || '',
+            gst_rate_id: currentRange?.default_gst_rate_id ?? null,
+            gst_rate_name: currentRange?.default_gst_rate_name || '0%',
+            gst_rate: currentRange?.default_gst_rate ?? 0,
+        });
     }
 
     function normalizeRow(row = {}) {
@@ -302,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sr_no: row.sr_no ?? null,
             transport_company_id: row.transport_company_id ?? null,
             transport_company_name: row.transport_company_name ?? '',
+            lr_date: row.lr_date ?? currentRange?.from_date ?? '',
             lr_no: row.lr_no ?? '',
             vehicle_type_id: row.vehicle_type_id ?? null,
             vehicle_type_name: row.vehicle_type_name ?? '',
@@ -322,21 +330,27 @@ document.addEventListener('DOMContentLoaded', () => {
             customer_balance: num(row.customer_balance),
             hamali_loading: normalizeNumberInput(row.hamali_loading),
             hamali_unloading: normalizeNumberInput(row.hamali_unloading),
+            other_charges: normalizeNumberInput(row.other_charges),
             profit: num(row.profit),
             bill_no: row.bill_no ?? '',
-            gst: normalizeNumberInput(row.gst),
+            gst_rate_id: row.gst_rate_id ?? currentRange?.default_gst_rate_id ?? null,
+            gst_rate_name: row.gst_rate_name ?? currentRange?.default_gst_rate_name ?? '0%',
+            gst_rate: num(row.gst_rate ?? currentRange?.default_gst_rate ?? 0),
+            gst: num(row.gst),
+            customer_amount: num(row.customer_amount),
+            invoice_total: num(row.invoice_total),
             remarks: row.remarks ?? '',
         };
     }
 
-    function normalizeDay(day = {}) {
+    function normalizeRange(range = {}) {
         return {
-            exists: !!day.exists,
-            id: day.id ?? null,
-            day_number: Number(day.day_number || 1),
-            day_number_formatted: day.day_number_formatted || String(day.day_number || 1).padStart(5, '0'),
-            entry_date: day.entry_date || '',
-            rows: Array.isArray(day.rows) ? day.rows : [],
+            from_date: range.from_date || '',
+            to_date: range.to_date || '',
+            default_gst_rate_id: range.default_gst_rate_id ?? null,
+            default_gst_rate_name: range.default_gst_rate_name || '0%',
+            default_gst_rate: num(range.default_gst_rate),
+            rows: Array.isArray(range.rows) ? range.rows : [],
         };
     }
 
@@ -345,13 +359,18 @@ document.addEventListener('DOMContentLoaded', () => {
             row.id || row.transport_company_id || row.customer_id || row.lr_no || row.vehicle_type_id ||
             row.lorry_no || row.so_ref_no || row.from_place || row.to_place || row.supplier_id ||
             num(row.supplier_freight) || num(row.supplier_advance) || num(row.customer_freight) ||
-            num(row.hamali_loading) || num(row.hamali_unloading) || num(row.gst) || row.bill_no || row.remarks
+            num(row.hamali_loading) || num(row.hamali_unloading) || num(row.other_charges) || row.remarks
         );
     }
 
     function recompute(row) {
         row.supplier_balance = Math.max(0, num(row.supplier_freight) - num(row.supplier_advance) - num(row.supplier_payment));
-        row.customer_balance = Math.max(0, num(row.customer_freight) - num(row.customer_paid));
+        // Loading, unloading and other charges are customer-borne but currently non-taxable.
+        // GST continues to apply only on Customer Freight unless the business rule changes later.
+        row.gst = Math.round((num(row.customer_freight) * num(row.gst_rate) / 100) * 100) / 100;
+        row.customer_amount = num(row.customer_freight) + num(row.hamali_loading) + num(row.hamali_unloading) + num(row.other_charges);
+        row.invoice_total = num(row.customer_amount) + num(row.gst);
+        row.customer_balance = Math.max(0, num(row.invoice_total) - num(row.customer_paid));
         row.profit = num(row.customer_freight) - num(row.supplier_freight);
     }
 
@@ -372,14 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setError(message) {
         setStatus(message, 'error');
-    }
-
-    function updateHeader() {
-        if (!currentDay) return;
-        dayNumberInput.value = String(currentDay.day_number).padStart(5, '0');
-        dateInput.textContent = formatDate(currentDay.entry_date || '');
-        dayState.textContent = currentDay.exists ? 'Saved Day' : 'New Day';
-        dayState.classList.toggle('existing', currentDay.exists);
     }
 
     function ensureTrailingBlank() {
@@ -418,6 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <tr data-row-index="${index}" class="${index === selectedIndex ? 'is-selected' : ''}">
                 <td class="sticky-sr"><div class="computed" style="justify-content:center">${row.sr_no ?? (index + 1)}</div></td>
                 <td class="sticky-company">${selectorCell(index, 'transport_company_id')}</td>
+                <td>${inputCell(index, 'lr_date', 'date')}</td>
                 <td>${inputCell(index, 'lr_no')}</td>
                 <td>${selectorCell(index, 'vehicle_type_id')}</td>
                 <td>${inputCell(index, 'lorry_no')}</td>
@@ -435,10 +447,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${computedCell(index, 'customer_balance')}</td>
                 <td>${inputCell(index, 'hamali_loading', 'number', 'min="0" step="0.01" inputmode="decimal"')}</td>
                 <td>${inputCell(index, 'hamali_unloading', 'number', 'min="0" step="0.01" inputmode="decimal"')}</td>
+                <td>${inputCell(index, 'other_charges', 'number', 'min="0" step="0.01" inputmode="decimal"')}</td>
                 <td>${computedCell(index, 'profit', 'profit-cell ' + (row.profit < 0 ? 'negative' : ''))}</td>
-                <td>${inputCell(index, 'bill_no')}</td>
-                <td>${inputCell(index, 'gst', 'number', 'min="0" step="0.01" inputmode="decimal"')}</td>
+                <td><div class="computed" style="justify-content:flex-start">${esc(row.bill_no || 'Auto')}</div></td>
+                <td>${selectorCell(index, 'gst_rate_id')}</td>
                 <td>${inputCell(index, 'remarks')}</td>
+                <td class="text-center"><button type="button" class="row-action delete" data-row-delete="${index}">Delete</button></td>
+                <td class="text-center"><button type="button" class="row-action" data-row-print="${index}" ${row.id ? '' : 'disabled'}>Print</button></td>
             </tr>
         `).join('');
 
@@ -574,76 +589,103 @@ document.addEventListener('DOMContentLoaded', () => {
         if (profit) profit.classList.toggle('negative', row.profit < 0);
     }
 
-    function applyDay(day, message = null) {
-        currentDay = normalizeDay(day);
-        rows = currentDay.rows.map(normalizeRow);
+    function applyRange(range, message = 'Loaded') {
+        currentRange = normalizeRange(range);
+        fromDateInput.value = currentRange.from_date;
+        toDateInput.value = currentRange.to_date;
+        rows = currentRange.rows.map(normalizeRow);
         deletedIds = [];
         selectedIndex = 0;
         ensureTrailingBlank();
-        updateHeader();
         render();
         dirty = false;
-        setStatus(message || (currentDay.exists ? 'Loaded' : 'New Day'), currentDay.exists ? 'ok' : '');
+        setStatus(message, 'ok');
     }
 
-    function parsedDayNumber() {
-        const raw = dayNumberInput.value.replace(/\D/g, '');
-        const number = Number(raw);
-        return Number.isInteger(number) && number > 0 ? number : null;
+    function validFilterDates() {
+        return !!fromDateInput.value && !!toDateInput.value && fromDateInput.value <= toDateInput.value;
     }
 
-    async function loadDay(dayNumber) {
+    async function loadRange(focusGrid = false) {
+        if (!validFilterDates()) {
+            setError('Select a valid From Date and To Date.');
+            return;
+        }
+
         try {
-            const url = new URL(routes.day, window.location.origin);
-            url.searchParams.set('day_number', String(dayNumber));
+            const url = new URL(routes.range, window.location.origin);
+            url.searchParams.set('from_date', fromDateInput.value);
+            url.searchParams.set('to_date', toDateInput.value);
             const response = await fetch(url, {headers:{Accept:'application/json'}});
             const data = await response.json();
-            if (!response.ok) throw new Error(data.message || firstValidation(data.errors) || 'Unable to load voucher day.');
-            applyDay(data.day, data.day.exists ? 'Voucher day loaded' : 'New voucher day');
-            requestAnimationFrame(() => focusFirstGridCell());
+            if (!response.ok) throw new Error(data.message || firstValidation(data.errors) || 'Unable to load voucher entries.');
+            applyRange(data.range, 'Entries loaded');
+            if (focusGrid) requestAnimationFrame(() => focusFirstGridCell());
         } catch (error) {
-            setError(error.message || 'Unable to load voucher day.');
-            dayNumberInput.focus();
-            dayNumberInput.select();
+            setError(error.message || 'Unable to load voucher entries.');
         }
     }
 
-    function requestLoadDay(dayNumber) {
-        if (dirty && !window.confirm('Unsaved voucher changes will be lost. Load another Voucher Number?')) {
-            dayNumberInput.value = String(currentDay.day_number).padStart(5, '0');
-            dayNumberInput.focus();
-            dayNumberInput.select();
+    function requestLoadRange(focusGrid = false) {
+        if (dirty && !window.confirm('Unsaved voucher changes will be lost. Load another date range?')) {
+            fromDateInput.value = currentRange?.from_date || fromDateInput.value;
+            toDateInput.value = currentRange?.to_date || toDateInput.value;
             return;
         }
-
-        loadDay(dayNumber);
+        loadRange(focusGrid);
     }
 
-    dayNumberInput.addEventListener('input', () => {
-        dayNumberInput.value = dayNumberInput.value.replace(/\D/g, '').slice(0, 5);
-    });
+    function clearWholeDate(input) {
+        input.value = '';
+        input.dispatchEvent(new Event('input', {bubbles:true}));
+    }
 
-    dayNumberInput.addEventListener('keydown', event => {
-        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    fromDateInput.addEventListener('keydown', event => {
+        if (event.key === 'Backspace') {
             event.preventDefault();
-            const current = parsedDayNumber() || currentDay?.day_number || 1;
-            const next = event.key === 'ArrowDown' ? Math.max(1, current - 1) : Math.min(99999, current + 1);
-            dayNumberInput.value = String(next).padStart(5, '0');
-            dayNumberInput.select();
+            clearWholeDate(fromDateInput);
             return;
         }
-
-        if (event.key !== 'Enter') return;
-        event.preventDefault();
-        const dayNumber = parsedDayNumber();
-        if (!dayNumber) {
-            setError('Enter a valid Voucher Number.');
-            dayNumberInput.select();
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (!fromDateInput.value) {
+                if (typeof fromDateInput.showPicker === 'function') fromDateInput.showPicker();
+                return;
+            }
+            toDateInput.focus();
             return;
         }
-        requestLoadDay(dayNumber);
+        if (event.key === 'ArrowRight' && fromDateInput.value) {
+            return;
+        }
     });
 
+    toDateInput.addEventListener('keydown', event => {
+        if (event.key === 'Backspace') {
+            event.preventDefault();
+            clearWholeDate(toDateInput);
+            return;
+        }
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (!toDateInput.value) {
+                if (typeof toDateInput.showPicker === 'function') toDateInput.showPicker();
+                return;
+            }
+            requestLoadRange(true);
+            return;
+        }
+    });
+
+    let dateReloadTimer = null;
+    [fromDateInput, toDateInput].forEach(input => {
+        input.addEventListener('change', () => {
+            window.clearTimeout(dateReloadTimer);
+            dateReloadTimer = window.setTimeout(() => {
+                if (validFilterDates()) requestLoadRange(false);
+            }, 120);
+        });
+    });
 
     body.addEventListener('focusin', event => {
         const element = event.target.closest('[data-grid-cell]');
@@ -673,6 +715,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     body.addEventListener('click', event => {
+        const deleteButton = event.target.closest('[data-row-delete]');
+        if (deleteButton) {
+            selectedIndex = Number(deleteButton.dataset.rowDelete);
+            deleteSelected();
+            return;
+        }
+
+        const printButton = event.target.closest('[data-row-print]');
+        if (printButton) {
+            const row = rows[Number(printButton.dataset.rowPrint)];
+            if (!row?.id) {
+                setError('Save this row first, then Print.');
+                return;
+            }
+            window.open(`${routes.printBase}/${row.id}`, '_blank', 'noopener');
+            return;
+        }
+
         const selector = event.target.closest('[data-selector]');
         if (selector) {
             openSelector(Number(selector.dataset.row), selector.dataset.field);
@@ -695,12 +755,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!row || !field) return;
 
         if (event.key === 'ArrowLeft') {
+            if (element instanceof HTMLInputElement && element.type === 'date') return;
             event.preventDefault();
             focusPreviousField(rowIndex, field);
             return;
         }
 
         if (event.key === 'ArrowRight') {
+            if (element instanceof HTMLInputElement && element.type === 'date') return;
             event.preventDefault();
             focusNextField(rowIndex, field);
             return;
@@ -709,8 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'ArrowUp') {
             event.preventDefault();
             if (rowIndex === 0) {
-                dayNumberInput.focus({preventScroll:true});
-                dayNumberInput.select();
+                fromDateInput.focus({preventScroll:true});
             } else {
                 focusVertical(rowIndex, field, -1);
             }
@@ -720,6 +781,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'ArrowDown') {
             event.preventDefault();
             focusVertical(rowIndex, field, 1);
+            return;
+        }
+
+        if (event.key === 'Backspace' && element instanceof HTMLInputElement && element.type === 'date') {
+            event.preventDefault();
+            element.value = '';
+            row[field] = '';
+            markDirty();
             return;
         }
 
@@ -741,6 +810,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (event.key !== 'Enter') return;
         event.preventDefault();
+
+        if (element instanceof HTMLInputElement && element.type === 'date') {
+            if (!element.value) {
+                if (typeof element.showPicker === 'function') element.showPicker();
+                return;
+            }
+            focusNextField(rowIndex, field);
+            return;
+        }
 
         if (element.matches('[data-selector]')) {
             if (row[field]) {
@@ -831,6 +909,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         row[context.field] = item.id;
         row[def.name] = item.name;
+        if (context.field === 'gst_rate_id') {
+            row.gst_rate = num(item.rate);
+        }
+        recompute(row);
         markDirty();
         closeSelector(false);
         render();
@@ -844,6 +926,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         row[field] = null;
         row[def.name] = '';
+        if (field === 'gst_rate_id') row.gst_rate = 0;
+        recompute(row);
         markDirty();
         render();
         requestAnimationFrame(() => focusCell(rowIndex, field, false));
@@ -915,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'Customer Paid Amount Installments';
 
         paymentModal.classList.remove('hidden');
-        payDate.value = currentDay?.entry_date || '';
+        payDate.value = row.lr_date || currentRange?.from_date || '';
         payAmount.value = '';
         payMode.value = 'Cash';
         payReference.value = '';
@@ -941,7 +1025,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (row) Object.assign(row, normalizeRow({...row, ...voucher}));
 
             document.getElementById('payVoucher').textContent = '#' + (voucher.sr_no || row?.sr_no || '-') + (voucher.lr_no ? ' · LR ' + voucher.lr_no : '');
-            const total = context.type === 'supplier' ? num(voucher.supplier_freight) : num(voucher.customer_freight);
+            const total = context.type === 'supplier'
+                ? num(voucher.supplier_freight)
+                : num(voucher.invoice_total || (num(voucher.customer_freight) + num(voucher.hamali_loading) + num(voucher.hamali_unloading) + num(voucher.other_charges) + num(voucher.gst)));
             const paid = context.type === 'supplier'
                 ? num(voucher.supplier_advance) + num(voucher.supplier_payment)
                 : num(voucher.customer_paid);
@@ -1129,17 +1215,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function saveAll() {
-        if (!currentDay) return;
-        if (!currentDay.entry_date) {
-            setError('Voucher date is unavailable. Reload the Voucher Number.');
-            dayNumberInput.focus();
-            dayNumberInput.select();
+        if (!currentRange || !validFilterDates()) {
+            setError('Select a valid From Date and To Date.');
+            fromDateInput.focus();
             return;
         }
 
         const payloadRows = rows.filter(activeRow).map(row => ({
             id: row.id,
             transport_company_id: row.transport_company_id,
+            lr_date: row.lr_date || currentRange.from_date,
             lr_no: row.lr_no || null,
             vehicle_type_id: row.vehicle_type_id,
             lorry_no: row.lorry_no || null,
@@ -1153,8 +1238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             customer_freight: num(row.customer_freight),
             hamali_loading: num(row.hamali_loading),
             hamali_unloading: num(row.hamali_unloading),
-            bill_no: row.bill_no || null,
-            gst: num(row.gst),
+            other_charges: num(row.other_charges),
+            gst_rate_id: row.gst_rate_id,
             remarks: row.remarks || null,
         }));
 
@@ -1165,8 +1250,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 method:'POST',
                 headers:{'Content-Type':'application/json', 'Accept':'application/json', 'X-CSRF-TOKEN':csrf},
                 body:JSON.stringify({
-                    day_number: currentDay.day_number,
-                    entry_date: currentDay.entry_date,
+                    from_date: currentRange.from_date,
+                    to_date: currentRange.to_date,
                     rows: payloadRows,
                     deleted_ids: deletedIds,
                 }),
@@ -1174,7 +1259,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || firstValidation(data.errors) || 'Unable to save voucher entries.');
 
-            applyDay(data.day, data.message || 'Saved');
+            applyRange(data.range, data.message || 'Saved');
         } catch (error) {
             setError(error.message || 'Save failed.');
         }
@@ -1273,10 +1358,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return day && month && year ? `${day}-${month}-${year}` : value;
     }
 
-    applyDay(initialDay, 'No unsaved changes');
+    applyRange(initialRange, 'No unsaved changes');
     window.setTimeout(() => {
-        dayNumberInput.focus();
-        dayNumberInput.select();
+        fromDateInput.focus();
     }, 0);
 });
 </script>

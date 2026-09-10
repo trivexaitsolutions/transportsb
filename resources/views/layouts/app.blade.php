@@ -70,6 +70,8 @@
                     <a href="{{ route('masters.index', ['type' => 'suppliers']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Suppliers / Transporters</a>
                     <a href="{{ route('masters.index', ['type' => 'vehicle-types']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Vehicle Types</a>
                     <a href="{{ route('masters.index', ['type' => 'transport-names']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Transport Names</a>
+                    <a href="{{ route('masters.index', ['type' => 'gst-rates']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">GST Master</a>
+                    <a href="{{ route('masters.settings') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Settings</a>
                 </div>
             </div>
         </nav>
