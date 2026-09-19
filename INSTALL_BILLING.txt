@@ -1,0 +1,12 @@
+XYZ Transport V2 - Billing / Acknowledgement module
+
+1. Replace/copy these files into the current V2 project.
+2. Run:
+   php artisan migrate
+   php artisan optimize:clear
+3. Open Sale > Bill / Acknowledgement.
+
+Important:
+- Do NOT run migrate:fresh if you want to preserve existing Masters, SO and Voucher data.
+- Acknowledgement attachments are stored on Laravel's local disk under storage/app/private/invoice-attachments.
+- At least one PDF/image acknowledgement attachment is required when creating a bill.
