@@ -58,7 +58,7 @@ class VoucherController extends Controller
             'from_date' => ['required', 'date_format:Y-m-d'],
             'to_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:from_date'],
             'rows' => ['array'],
-            'rows.*.id' => ['nullable', 'integer', 'exists:vouchers,id'],
+            'rows.*.id' => ['nullable', 'integer', 'distinct', 'exists:vouchers,id'],
             'rows.*.lr_date' => ['required', 'date_format:Y-m-d'],
             'rows.*.sales_order_id' => ['required', 'integer', 'exists:sales_orders,id'],
             'rows.*.transport_name_id' => ['nullable', 'integer', 'exists:transport_names,id'],
@@ -134,6 +134,15 @@ class VoucherController extends Controller
                 ];
 
                 if ($voucher) {
+                    $voucher->fill($payload);
+                    if ($voucher->invoiceItem()->exists() && $voucher->isDirty([
+                        'lr_date', 'sales_order_id', 'transport_name_id', 'lr_no', 'vehicle_type_id',
+                        'lorry_number', 'supplier_id', 'other_charges', 'remarks', 'description',
+                    ])) {
+                        throw ValidationException::withMessages([
+                            'rows.'.$index => 'This trip is already included in a customer bill. Edit the bill acknowledgement instead of changing its LR details.',
+                        ]);
+                    }
                     $voucher->update($payload);
                 } else {
                     $payload['sr_no'] = ((int) Voucher::query()->lockForUpdate()->max('sr_no')) + 1;

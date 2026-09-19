@@ -89,6 +89,16 @@ class MasterController extends Controller
         return back()->with('success', $config['singular'].' deleted successfully.');
     }
 
+    public function createForm(string $type): JsonResponse
+    {
+        [, $config] = $this->definition($type);
+
+        return response()->json([
+            'singular' => $config['singular'],
+            'html' => view('masters.partials.form-fields', compact('config'))->render(),
+        ]);
+    }
+
     /**
      * Reusable keyboard-friendly master selector API for SO/Trip/Ledger screens.
      */
@@ -265,6 +275,7 @@ class MasterController extends Controller
             'id' => $item->id,
             'name' => $item->name,
             'code' => $item->code ?? null,
+            'gst_no' => $item->gst_no ?? null,
             'rate' => $item->rate ?? null,
             'label' => $label,
         ];

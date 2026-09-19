@@ -16,8 +16,10 @@
     $pan = strlen($gstNo) >= 12 ? substr($gstNo, 2, 10) : '-';
     $stateCode = strlen($gstNo) >= 2 ? substr($gstNo, 0, 2) : '27';
     if ($stateCode === '27') $stateCode = '27 (Maharashtra)';
-    $otherCharges = round((float) $invoice->items->sum(fn ($item) => (float) ($item->voucher?->other_charges ?? 0)), 2);
-    $displayTotal = round((float)$invoice->customer_freight + (float)$invoice->gst_amount + $otherCharges, 2);
+    $taxMode = ($invoice->tax_mode === 'hiring') ? 'hiring' : 'rcm';
+    $isRcm = $taxMode === 'rcm';
+    $otherCharges = round((float) $invoice->other_charges, 2);
+    $displayTotal = round((float) $invoice->total_amount, 2);
     $amountWords = number_format($displayTotal, 2).' Rupees Only';
     if (class_exists('NumberFormatter')) {
         try {
@@ -81,9 +83,8 @@
         <tr><td>Total Invoice Amount</td><td class="num bold">₹{{ number_format($displayTotal,2) }}</td></tr>
     </table>
     <div class="amount-words">Rupees: {{ $amountWords }}</div>
-    @if(($customer?->is_government_employee ?? false) && trim((string)($customer?->bill_note ?? '')) !== '')
-        @php($billNote = trim((string)$customer->bill_note))
-        <div class="customer-bill-note">{{ $billNote }}@if(!str_contains(strtolower($billNote), 'if applicable')) (If Applicable)@endif</div>
+    @if($isRcm)
+        <div class="customer-bill-note">GST @5% WILL BE PAID BY SERVICE USER UNDER RCM (If Applicable). RCM @5%: ₹{{ number_format((float)$invoice->rcm_amount,2) }}</div>
     @endif
 
     <div class="terms-sign"><div class="terms"><h4>TERMS OF PAYMENT</h4><ol><li>Please do not deduct any amount from the bill without our consent.</li><li>Any dispute is subject to local jurisdiction only.</li><li>Payment should quote the invoice number.</li></ol>@if($invoice->remarks)<div style="margin-top:8px"><b>Remarks:</b> {{ $invoice->remarks }}</div>@endif</div><div class="signature"><div class="bold">For {{ $profile['name'] }}</div><div class="bold">Authorised Signatory</div></div></div>

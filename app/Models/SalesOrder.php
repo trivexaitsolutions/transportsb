@@ -10,7 +10,7 @@ class SalesOrder extends Model
 {
     protected $fillable = [
         'so_number', 'so_date', 'customer_id', 'from_location', 'to_location', 'description',
-        'trips_quantity', 'per_trip_cost', 'value', 'gst_rate_id', 'gst_rate', 'gst_amount',
+        'trips_quantity', 'per_trip_cost', 'value', 'gst_rate_id', 'tax_mode', 'gst_rate', 'gst_amount',
         'other_charges', 'total_amount', 'is_active', 'created_by',
     ];
 
@@ -21,6 +21,7 @@ class SalesOrder extends Model
             'trips_quantity' => 'integer',
             'per_trip_cost' => 'decimal:2',
             'value' => 'decimal:2',
+            'tax_mode' => 'string',
             'gst_rate' => 'decimal:2',
             'gst_amount' => 'decimal:2',
             'other_charges' => 'decimal:2',

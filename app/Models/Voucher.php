@@ -31,5 +31,6 @@ class Voucher extends Model
     public function vehicleType(): BelongsTo { return $this->belongsTo(VehicleType::class); }
     public function supplier(): BelongsTo { return $this->belongsTo(Supplier::class); }
     public function supplierPayments(): HasMany { return $this->hasMany(SupplierPayment::class); }
+    public function attachments(): HasMany { return $this->hasMany(VoucherAttachment::class); }
     public function invoiceItem(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(InvoiceItem::class); }
 }

@@ -52,6 +52,18 @@
             </div>
 
             <div class="relative" data-nav-dropdown>
+                <button type="button" id="nav-payments" data-nav-item data-nav-toggle aria-label="Payments"
+                    class="flex h-full items-center gap-2 {{ request()->routeIs('payments.*') ? 'bg-white/15' : '' }} px-4 text-sm font-semibold text-white outline-none focus:bg-white/20 focus:ring-2 focus:ring-inset focus:ring-amber-300">
+                    Payments
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.17l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" /></svg>
+                </button>
+                <div class="absolute left-0 top-full z-50 hidden w-64 border border-slate-200 bg-white py-1 text-slate-800 shadow-xl" data-nav-menu>
+                    <a href="{{ route('payments.suppliers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Supplier Payment</a>
+                    <a href="{{ route('payments.customers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Customer Payment</a>
+                </div>
+            </div>
+
+            <div class="relative" data-nav-dropdown>
                 <button type="button" id="nav-masters" data-nav-item data-nav-toggle aria-label="Masters"
                     class="flex h-full items-center gap-2 {{ request()->routeIs('masters.*') ? 'bg-white/15' : '' }} px-4 text-sm font-semibold text-white outline-none focus:bg-white/20 focus:ring-2 focus:ring-inset focus:ring-amber-300">
                     Masters
@@ -103,7 +115,7 @@
             <button type="button" id="quickMasterClose" class="text-2xl">×</button>
         </div>
         <form id="quickMasterForm" class="p-4">
-            <div id="quickMasterFields" class="quick-master-grid"></div>
+            <div id="quickMasterFields"></div>
             <div class="mt-4 flex justify-end gap-2">
                 <button type="button" id="quickMasterCancel" class="border border-slate-400 px-4 py-2 font-bold">Cancel</button>
                 <button type="submit" id="quickMasterSave" class="bg-emerald-800 px-5 py-2 font-black text-white">Save</button>
@@ -203,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('click', e => { if (!nav.contains(e.target)) closeAll(); });
 
     window.AppPageExit = function (navSelector=null) {
+        if (typeof window.AppBeforePageExit === 'function' && window.AppBeforePageExit() === false) return;
         const main=document.querySelector('.app-main');
         const target=navSelector||main?.dataset.pageNavTarget||'#nav-masters';
         document.querySelectorAll('.app-workspace').forEach(w=>w.classList.add('hidden'));

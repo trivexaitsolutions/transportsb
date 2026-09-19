@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\GstRate;
+use App\Models\Customer;
 use App\Models\SalesOrder;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -25,7 +24,7 @@ class SalesOrderController extends Controller
         }
 
         $query = SalesOrder::query()
-            ->with(['customer:id,name,code', 'gstRate:id,name,rate'])
+            ->with(['customer:id,name,code,gst_no'])
             ->withCount('vouchers');
 
         if ($search !== '') {
@@ -51,15 +50,9 @@ class SalesOrderController extends Controller
         }
 
         $items = $query->orderByDesc('so_date')->orderByDesc('id')->paginate(50)->withQueryString();
-        $selectedCustomer = $customerId ? \App\Models\Customer::query()->find($customerId) : null;
-        $defaultGst = GstRate::query()->where('is_active', true)->orderByDesc('is_default')->orderBy('rate')->first();
-        $defaultGstPayload = $defaultGst ? [
-            'id' => $defaultGst->id,
-            'rate' => (float) $defaultGst->rate,
-            'label' => rtrim(rtrim(number_format((float) $defaultGst->rate, 2, '.', ''), '0'), '.').'%',
-        ] : ['id' => null, 'rate' => 0, 'label' => '0%'];
+        $selectedCustomer = $customerId ? Customer::query()->find($customerId) : null;
 
-        return view('sale.orders.index', compact('items', 'search', 'customerId', 'selectedCustomer', 'status', 'defaultGst', 'defaultGstPayload'));
+        return view('sale.orders.index', compact('items', 'search', 'customerId', 'selectedCustomer', 'status'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -155,6 +148,17 @@ class SalesOrderController extends Controller
 
     private function validated(Request $request, ?int $id = null): array
     {
+        $requestedMode = strtolower(trim($request->string('tax_mode')->toString()));
+        if (! in_array($requestedMode, ['rcm', 'hiring'], true)) {
+            $customer = $request->integer('customer_id') ? Customer::query()->find($request->integer('customer_id')) : null;
+            $requestedMode = blank(trim((string) ($customer?->gst_no ?? ''))) ? 'rcm' : 'hiring';
+        }
+
+        $request->merge([
+            'so_number' => strtoupper(trim($request->string('so_number')->toString())),
+            'tax_mode' => $requestedMode,
+        ]);
+
         $data = $request->validate([
             'so_number' => ['required', 'string', 'max:150', Rule::unique('sales_orders', 'so_number')->ignore($id)],
             'so_date' => ['required', 'date'],
@@ -164,7 +168,7 @@ class SalesOrderController extends Controller
             'description' => ['required', 'string', 'max:4000'],
             'trips_quantity' => ['required', 'integer', 'min:1', 'max:10000'],
             'per_trip_cost' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
-            'gst_rate_id' => ['nullable', 'integer', 'exists:gst_rates,id'],
+            'tax_mode' => ['required', Rule::in(['rcm', 'hiring'])],
             'other_charges' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -174,8 +178,8 @@ class SalesOrderController extends Controller
 
     private function calculatedPayload(array $data): array
     {
-        $gst = !empty($data['gst_rate_id']) ? GstRate::query()->find($data['gst_rate_id']) : null;
-        $rate = (float) ($gst?->rate ?? 0);
+        $taxMode = $data['tax_mode'] === 'hiring' ? 'hiring' : 'rcm';
+        $rate = $taxMode === 'hiring' ? 18.0 : 0.0;
         $trips = (int) $data['trips_quantity'];
         $perTrip = (float) $data['per_trip_cost'];
         $value = round($trips * $perTrip, 2);
@@ -192,7 +196,8 @@ class SalesOrderController extends Controller
             'trips_quantity' => $trips,
             'per_trip_cost' => $perTrip,
             'value' => $value,
-            'gst_rate_id' => $gst?->id,
+            'gst_rate_id' => null,
+            'tax_mode' => $taxMode,
             'gst_rate' => $rate,
             'gst_amount' => $gstAmount,
             'other_charges' => $other,

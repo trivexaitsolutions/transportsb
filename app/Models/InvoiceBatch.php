@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class InvoiceBatch extends Model
 {
     protected $fillable = [
-        'bill_no', 'invoice_date', 'customer_id', 'sales_order_id', 'trip_count', 'customer_freight',
-        'gst_rate', 'gst_amount', 'other_charges', 'total_amount', 'remarks', 'created_by',
+        'bill_no', 'invoice_date', 'customer_id', 'sales_order_id', 'tax_mode', 'trip_count', 'customer_freight',
+        'gst_rate', 'gst_amount', 'rcm_rate', 'rcm_amount', 'other_charges', 'total_amount', 'remarks', 'created_by',
     ];
 
     protected function casts(): array
@@ -19,8 +19,11 @@ class InvoiceBatch extends Model
             'invoice_date' => 'date',
             'trip_count' => 'integer',
             'customer_freight' => 'decimal:2',
+            'tax_mode' => 'string',
             'gst_rate' => 'decimal:2',
             'gst_amount' => 'decimal:2',
+            'rcm_rate' => 'decimal:2',
+            'rcm_amount' => 'decimal:2',
             'other_charges' => 'decimal:2',
             'total_amount' => 'decimal:2',
         ];

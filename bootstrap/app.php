@@ -5,6 +5,8 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -27,5 +29,17 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => $message], 409);
             }
             return back()->with('error', $message);
+        });
+
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if (! $request->expectsJson() || $e instanceof ValidationException || $e instanceof HttpExceptionInterface) {
+                return null;
+            }
+
+            report($e);
+
+            return response()->json([
+                'message' => 'The request could not be completed. Please try again.',
+            ], 500);
         });
     })->create();

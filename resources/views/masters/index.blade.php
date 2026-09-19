@@ -59,21 +59,7 @@
         <div class="flex items-center justify-between bg-emerald-950 px-5 py-3 text-white"><h2 id="modalTitle" class="font-black">Add {{ $config['singular'] }}</h2><button type="button" id="closeMasterBtn" class="text-2xl">×</button></div>
         <form id="masterForm" method="POST" action="{{ route('masters.store',['type'=>$type]) }}" class="p-5">@csrf
             <div id="methodSlot"></div>
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                @foreach($config['fields'] as $field)
-                    @if($field['type']==='checkbox')
-                        <label data-field-wrap="{{ $field['name'] }}" class="{{ !empty($field['wide'])?'md:col-span-2':'' }} flex items-center gap-3 border border-slate-200 bg-slate-50 p-3 font-bold text-slate-700"><input type="checkbox" name="{{ $field['name'] }}" value="1" data-master-field="{{ $field['name'] }}" @checked($field['default'] ?? ($field['name'] === 'is_active')) class="h-5 w-5"> {{ $field['label'] }}</label>
-                    @else
-                        <label data-field-wrap="{{ $field['name'] }}" data-create-hidden="{{ !empty($field['create_hidden']) ? '1' : '0' }}" class="{{ !empty($field['wide'])?'md:col-span-2':'' }}"><span class="mb-1 block text-xs font-black uppercase tracking-wide text-slate-600">{{ $field['label'] }} @if(!empty($field['required']))<span class="text-red-600">*</span>@endif</span>
-                            @if($field['type']==='textarea')
-                                <textarea name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" data-default-value="{{ $field['default'] ?? '' }}" class="master-textarea" {{ !empty($field['required'])?'required':'' }}>{{ $field['default'] ?? '' }}</textarea>
-                            @else
-                                <input type="{{ $field['type'] }}" name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input" @if($field['type']==='number') step="0.01" @endif {{ !empty($field['required'])?'required':'' }}>
-                            @endif
-                        </label>
-                    @endif
-                @endforeach
-            </div>
+            @include('masters.partials.form-fields', ['config' => $config])
             <div class="mt-5 flex justify-end gap-2"><button type="button" id="cancelMasterBtn" class="border border-slate-400 px-5 py-2.5 text-sm font-bold">Cancel</button><button type="submit" class="bg-emerald-800 px-6 py-2.5 text-sm font-black text-white">Save</button></div>
             <div class="mt-2 text-right text-xs font-semibold text-slate-500">Insert = Add · Enter = next field · Ctrl+S = Save · Esc = Close</div>
         </form>
@@ -112,7 +98,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         opener=btn;
         let r={};
         try{r=JSON.parse(btn.dataset.record||'{}');}
-        catch(err){window.showToast?.('Unable to open this record for editing. Please refresh and try again.','error');return;}
+        catch(err){window.AppToast?.('Unable to open this record for editing. Please refresh and try again.','error');return;}
         form.action=baseUrl+'/'+btn.dataset.id;methodSlot.innerHTML='<input type="hidden" name="_method" value="PUT">';title.textContent='Edit '+singular;
         form.querySelectorAll('[data-create-hidden=\"1\"]').forEach(wrap=>{wrap.classList.remove('hidden');const input=wrap.querySelector('[data-master-field]');if(input)input.disabled=false;});
         fields().forEach(el=>{const v=r[el.dataset.masterField];if(el.type==='checkbox')el.checked=!!v;else el.value=v??'';});syncGovernmentNote(true);
@@ -129,8 +115,8 @@ document.addEventListener('DOMContentLoaded',()=>{
 
     form.addEventListener('keydown',e=>{
         if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'){
-            e.preventDefault();const list=visibleFields();const i=list.indexOf(e.target);
-            if(i>=0&&i<list.length-1)list[i+1].focus();else form.requestSubmit();
+            const list=visibleFields();const i=list.indexOf(e.target);if(i<0)return;e.preventDefault();
+            if(i<list.length-1)list[i+1].focus();else form.requestSubmit();
         }
     });
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('sale.orders.index') : redirect()->route('login'));
@@ -25,6 +26,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/vouchers', [VoucherController::class, 'index'])->name('vouchers.index');
         Route::post('/vouchers/save-all', [VoucherController::class, 'saveAll'])->name('vouchers.save-all');
         Route::delete('/vouchers/{voucher}', [VoucherController::class, 'destroy'])->name('vouchers.destroy');
+        Route::get('/vouchers/{voucher}/attachments/{attachment}', [BillingController::class, 'voucherAttachment'])->name('vouchers.attachments.show');
         Route::get('/vouchers/{voucher}/supplier-payments', [VoucherController::class, 'payments'])->name('vouchers.payments');
         Route::post('/vouchers/{voucher}/supplier-payments', [VoucherController::class, 'storePayment'])->name('vouchers.payments.store');
         Route::delete('/vouchers/{voucher}/supplier-payments/{payment}', [VoucherController::class, 'destroyPayment'])->name('vouchers.payments.destroy');
@@ -42,10 +44,23 @@ Route::middleware('auth')->group(function () {
         Route::delete('/bills/{invoice}/payments/{payment}', [BillingController::class, 'destroyPayment'])->name('billing.payments.destroy');
     });
 
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/suppliers', [PaymentController::class, 'supplierIndex'])->name('suppliers.index');
+        Route::post('/suppliers', [PaymentController::class, 'supplierStore'])->name('suppliers.store');
+        Route::get('/suppliers/{payment}/attachment', [PaymentController::class, 'supplierAttachment'])->name('suppliers.attachment');
+        Route::delete('/suppliers/{payment}', [PaymentController::class, 'supplierDestroy'])->name('suppliers.destroy');
+
+        Route::get('/customers', [PaymentController::class, 'customerIndex'])->name('customers.index');
+        Route::post('/customers', [PaymentController::class, 'customerStore'])->name('customers.store');
+        Route::get('/customers/{payment}/attachment', [PaymentController::class, 'customerAttachment'])->name('customers.attachment');
+        Route::delete('/customers/{payment}', [PaymentController::class, 'customerDestroy'])->name('customers.destroy');
+    });
+
     Route::prefix('masters')->name('masters.')->group(function () {
         Route::get('/settings', [MasterController::class, 'settings'])->name('settings');
         Route::put('/settings', [MasterController::class, 'updateSettings'])->name('settings.update');
         Route::get('/options/{type}', [MasterController::class, 'options'])->name('options');
+        Route::get('/form/{type}', [MasterController::class, 'createForm'])->name('form');
         Route::get('/{type}', [MasterController::class, 'index'])->name('index');
         Route::post('/{type}', [MasterController::class, 'store'])->name('store');
         Route::put('/{type}/{id}', [MasterController::class, 'update'])->name('update');
