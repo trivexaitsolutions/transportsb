@@ -6,6 +6,7 @@ use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\LedgerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('sale.orders.index') : redirect()->route('login'));
@@ -54,6 +55,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/customers', [PaymentController::class, 'customerStore'])->name('customers.store');
         Route::get('/customers/{payment}/attachment', [PaymentController::class, 'customerAttachment'])->name('customers.attachment');
         Route::delete('/customers/{payment}', [PaymentController::class, 'customerDestroy'])->name('customers.destroy');
+    });
+
+    Route::prefix('ledgers')->name('ledgers.')->group(function () {
+        Route::get('/customers', [LedgerController::class, 'customerIndex'])->name('customers.index');
+        Route::get('/suppliers', [LedgerController::class, 'supplierIndex'])->name('suppliers.index');
     });
 
     Route::prefix('masters')->name('masters.')->group(function () {
