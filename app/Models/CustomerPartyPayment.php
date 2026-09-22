@@ -9,6 +9,8 @@ class CustomerPartyPayment extends Model
 {
     protected $fillable = [
         'customer_id',
+        'payment_type',
+        'invoice_batch_id',
         'payment_date',
         'amount',
         'payment_mode',
@@ -25,6 +27,7 @@ class CustomerPartyPayment extends Model
     {
         return [
             'payment_date' => 'date',
+            'payment_type' => 'string',
             'amount' => 'decimal:2',
             'attachment_size' => 'integer',
         ];
@@ -33,6 +36,11 @@ class CustomerPartyPayment extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class);
+    }
+
+    public function invoiceBatch(): BelongsTo
+    {
+        return $this->belongsTo(InvoiceBatch::class);
     }
 
     public function creator(): BelongsTo

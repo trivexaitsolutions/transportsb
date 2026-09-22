@@ -16,10 +16,11 @@
     $pan = strlen($gstNo) >= 12 ? substr($gstNo, 2, 10) : '-';
     $stateCode = strlen($gstNo) >= 2 ? substr($gstNo, 0, 2) : '27';
     if ($stateCode === '27') $stateCode = '27 (Maharashtra)';
-    $taxMode = ($invoice->tax_mode === 'hiring') ? 'hiring' : 'rcm';
+    $taxMode = in_array($invoice->tax_mode, ['rcm', 'hiring', 'gst', 'na'], true) ? $invoice->tax_mode : 'rcm';
     $isRcm = $taxMode === 'rcm';
     $otherCharges = round((float) $invoice->other_charges, 2);
-    $displayTotal = round((float) $invoice->total_amount, 2);
+    $freightGstTotal = round((float) $invoice->customer_freight + (float) $invoice->gst_amount, 2);
+    $displayTotal = round($freightGstTotal + $otherCharges, 2);
     $amountWords = number_format($displayTotal, 2).' Rupees Only';
     if (class_exists('NumberFormatter')) {
         try {
@@ -51,6 +52,7 @@
         <div>
             <div class="meta-line"><span class="label">TAX INVOICE NO.</span><span class="bold">{{ $invoice->bill_no }}</span></div>
             <div class="meta-line"><span class="label">SO NO.</span><span class="bold">{{ $order?->so_number ?: '-' }}</span></div>
+            <div class="meta-line"><span class="label">TAX MODE</span><span class="bold">{{ strtoupper($taxMode) }}</span></div>
             <div class="meta-line"><span class="label">SAC NO.</span><span class="bold">9965</span></div>
         </div>
         <div>
@@ -76,10 +78,13 @@
 
     <table class="totals">
         <tr><td>Customer Freight</td><td class="num" style="width:180px">₹{{ number_format((float)$invoice->customer_freight,2) }}</td></tr>
+        @if($taxMode === 'na')
+        <tr><td>GST</td><td class="num bold">NA</td></tr>
+        @else
         <tr><td>GST @ {{ rtrim(rtrim(number_format((float)$invoice->gst_rate,2,'.',''),'0'),'.') }}%</td><td class="num">₹{{ number_format((float)$invoice->gst_amount,2) }}</td></tr>
-        @if((float)$otherCharges > 0)
-        <tr><td>Other Charges</td><td class="num">₹{{ number_format($otherCharges,2) }}</td></tr>
         @endif
+        <tr><td>Total</td><td class="num bold">₹{{ number_format($freightGstTotal,2) }}</td></tr>
+        <tr><td>Other Charges</td><td class="num">₹{{ number_format($otherCharges,2) }}</td></tr>
         <tr><td>Total Invoice Amount</td><td class="num bold">₹{{ number_format($displayTotal,2) }}</td></tr>
     </table>
     <div class="amount-words">Rupees: {{ $amountWords }}</div>

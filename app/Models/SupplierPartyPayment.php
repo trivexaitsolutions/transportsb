@@ -9,6 +9,8 @@ class SupplierPartyPayment extends Model
 {
     protected $fillable = [
         'supplier_id',
+        'payment_type',
+        'voucher_id',
         'payment_date',
         'amount',
         'payment_mode',
@@ -33,6 +35,11 @@ class SupplierPartyPayment extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function voucher(): BelongsTo
+    {
+        return $this->belongsTo(Voucher::class);
     }
 
     public function creator(): BelongsTo

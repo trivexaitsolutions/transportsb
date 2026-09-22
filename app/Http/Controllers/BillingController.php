@@ -237,7 +237,7 @@ class BillingController extends Controller
                 $count = $vouchers->count();
                 $otherCharges = round((float) $vouchers->sum('other_charges'), 2);
                 $freight = round((float) $validated['customer_freight'], 2);
-                $tax = $this->taxAmounts($order->tax_mode, $freight, $otherCharges);
+                $tax = $this->taxAmounts($order->tax_mode, $freight, $otherCharges, (float) $order->gst_rate);
 
                 $invoice = InvoiceBatch::query()->create([
                     'bill_no' => 'TMP-'.Str::uuid(),
@@ -353,7 +353,7 @@ class BillingController extends Controller
 
                 $otherCharges = round((float) $vouchers->sum('other_charges'), 2);
                 $freight = round((float) $validated['customer_freight'], 2);
-                $tax = $this->taxAmounts($locked->tax_mode, $freight, $otherCharges);
+                $tax = $this->taxAmounts($locked->tax_mode, $freight, $otherCharges, (float) $locked->gst_rate);
                 $paid = round((float) $locked->payments()->sum('amount'), 2);
                 if ($tax['total_amount'] + 0.004 < $paid) {
                     throw ValidationException::withMessages([
@@ -484,10 +484,18 @@ class BillingController extends Controller
         return view('sale.billing.print', compact('invoice','printSettings'));
     }
 
-    private function taxAmounts(?string $mode, float $freight, float $otherCharges): array
+    private function taxAmounts(?string $mode, float $freight, float $otherCharges, float $selectedGstRate = 0.0): array
     {
-        $mode = $mode === 'hiring' ? 'hiring' : 'rcm';
-        $gstRate = $mode === 'hiring' ? 18.0 : 0.0;
+        $mode = in_array($mode, ['rcm', 'hiring', 'gst', 'na'], true) ? $mode : 'rcm';
+        if ($mode === 'hiring') {
+            $gstRate = 18.0;
+        } elseif ($mode === 'gst') {
+            $requestedRate = (int) round($selectedGstRate);
+            $gstRate = in_array($requestedRate, [5, 12, 18], true) ? (float) $requestedRate : 5.0;
+        } else {
+            // RCM and NA do not add normal GST to the bill.
+            $gstRate = 0.0;
+        }
         $gstAmount = round($freight * $gstRate / 100, 2);
         $rcmRate = $mode === 'rcm' ? 5.0 : 0.0;
         $rcmAmount = round($freight * $rcmRate / 100, 2);

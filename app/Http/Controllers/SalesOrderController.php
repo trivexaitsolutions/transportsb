@@ -149,7 +149,7 @@ class SalesOrderController extends Controller
     private function validated(Request $request, ?int $id = null): array
     {
         $requestedMode = strtolower(trim($request->string('tax_mode')->toString()));
-        if (! in_array($requestedMode, ['rcm', 'hiring'], true)) {
+        if (! in_array($requestedMode, ['rcm', 'hiring', 'gst', 'na'], true)) {
             $customer = $request->integer('customer_id') ? Customer::query()->find($request->integer('customer_id')) : null;
             $requestedMode = blank(trim((string) ($customer?->gst_no ?? ''))) ? 'rcm' : 'hiring';
         }
@@ -168,7 +168,8 @@ class SalesOrderController extends Controller
             'description' => ['required', 'string', 'max:4000'],
             'trips_quantity' => ['required', 'integer', 'min:1', 'max:10000'],
             'per_trip_cost' => ['required', 'numeric', 'min:0', 'max:999999999999.99'],
-            'tax_mode' => ['required', Rule::in(['rcm', 'hiring'])],
+            'tax_mode' => ['required', Rule::in(['rcm', 'hiring', 'gst', 'na'])],
+            'gst_rate' => ['required', 'numeric', Rule::in([0, 5, 12, 18])],
             'other_charges' => ['nullable', 'numeric', 'min:0', 'max:999999999999.99'],
             'is_active' => ['nullable', 'boolean'],
         ]);
@@ -178,8 +179,16 @@ class SalesOrderController extends Controller
 
     private function calculatedPayload(array $data): array
     {
-        $taxMode = $data['tax_mode'] === 'hiring' ? 'hiring' : 'rcm';
-        $rate = $taxMode === 'hiring' ? 18.0 : 0.0;
+        $taxMode = in_array($data['tax_mode'], ['rcm', 'hiring', 'gst', 'na'], true) ? $data['tax_mode'] : 'rcm';
+        if ($taxMode === 'hiring') {
+            $rate = 18.0;
+        } elseif ($taxMode === 'gst') {
+            $requestedRate = (float) ($data['gst_rate'] ?? 0);
+            $rate = in_array((int) round($requestedRate), [5, 12, 18], true) ? (float) ((int) round($requestedRate)) : 5.0;
+        } else {
+            // RCM and NA do not add normal GST to the invoice total.
+            $rate = 0.0;
+        }
         $trips = (int) $data['trips_quantity'];
         $perTrip = (float) $data['per_trip_cost'];
         $value = round($trips * $perTrip, 2);

@@ -148,8 +148,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     function selectedTrips(){return state.trips.filter(t=>state.selected.has(Number(t.id)));}
     function selectedDefaultFreight(){return selectedTrips().length*Number(state.order?.per_trip_cost||0);}
     function selectedOtherCharges(){return selectedTrips().reduce((sum,t)=>sum+Number(t.other_charges||0),0);}
-    function taxMode(){return (state.editingInvoice?.tax_mode||state.order?.tax_mode)==='hiring'?'hiring':'rcm';}
-    function invoiceMath(freight,other){const mode=taxMode(),gst=mode==='hiring'?freight*.18:0,rcm=mode==='rcm'?freight*.05:0;return{mode,gst,rcm,total:freight+gst+other};}
+    function taxMode(){const mode=state.editingInvoice?.tax_mode||state.order?.tax_mode;return ['rcm','hiring','gst','na'].includes(mode)?mode:'rcm';}
+    function invoiceMath(freight,other){const mode=taxMode(),rate=mode==='hiring'?18:(mode==='gst'?Number(state.editingInvoice?.gst_rate??state.order?.gst_rate??0):0),gst=freight*rate/100,rcm=mode==='rcm'?freight*.05:0;return{mode,rate,gst,rcm,total:freight+gst+other};}
     function updateSelectionStatus(){if(state.editingInvoice){footerStatus.textContent=`Editing ${state.editingInvoice.bill_no} · ${state.trips.length} trip(s)`;return;}const c=state.selected.size,freight=selectedDefaultFreight(),other=selectedOtherCharges(),math=invoiceMath(freight,other);footerStatus.textContent=c?`${c} truck(s) selected · Freight ${money(freight)} · Total ${money(math.total)}`:'No trucks selected';}
     function toggleAll(){if(!state.order||state.editingInvoiceId)return;const pending=state.trips.filter(t=>!t.billed).map(t=>t.id);const all=pending.length&&pending.every(id=>state.selected.has(id));state.selected=new Set(all?[]:pending);renderTrips();updateSelectionStatus();if(!all)focusFirstPending();}
     checkAllBtn.addEventListener('click',toggleAll);

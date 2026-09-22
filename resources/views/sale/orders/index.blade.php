@@ -45,7 +45,7 @@
                     <td style="max-width:320px">{{ $item->description }}</td>
                     <td class="text-right font-bold">{{ $item->trips_quantity }}</td><td class="text-right">{{ $used }}</td><td class="text-right font-bold">{{ $remaining }}</td>
                     <td class="text-right">₹{{ number_format((float)$item->per_trip_cost,2) }}</td><td class="text-right">₹{{ number_format((float)$item->value,2) }}</td>
-                    <td><b>{{ strtoupper($item->tax_mode ?? 'rcm') }}</b><br><span>GST @ {{ rtrim(rtrim(number_format((float)$item->gst_rate,2,'.',''),'0'),'.') }}% = ₹{{ number_format((float)$item->gst_amount,2) }}</span><br><span class="text-slate-500">Other: ₹{{ number_format((float)$item->other_charges,2) }}</span></td>
+                    <td><b>{{ strtoupper($item->tax_mode ?? 'rcm') }}</b><br>@if(($item->tax_mode ?? 'rcm') === 'na')<span>GST: NA</span>@elseif(($item->tax_mode ?? 'rcm') === 'rcm')<span>RCM @ 5% (Info) = ₹{{ number_format((float)$item->value * .05,2) }}</span>@else<span>GST @ {{ rtrim(rtrim(number_format((float)$item->gst_rate,2,'.',''),'0'),'.') }}% = ₹{{ number_format((float)$item->gst_amount,2) }}</span>@endif<br><span class="text-slate-500">Other: ₹{{ number_format((float)$item->other_charges,2) }}</span></td>
                     <td class="text-right font-black">₹{{ number_format((float)$item->total_amount,2) }}</td>
                     <td>@if(!$item->is_active)<span class="so-inactive">Inactive</span>@elseif($remaining<=0)<span class="so-complete">Completed</span>@else<span class="so-open">Open</span><div class="text-[11px] text-slate-500">{{ $used }}/{{ $item->trips_quantity }} trips</div>@endif</td>
                     <td class="whitespace-nowrap">
@@ -79,8 +79,8 @@
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Trips Quantity <span class="text-red-600">*</span></span><input type="number" min="1" step="1" class="so-input" name="trips_quantity" data-so-field="trips_quantity" required></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Per Trip Cost <span class="text-red-600">*</span></span><input type="number" min="0" step="0.01" class="so-input" name="per_trip_cost" data-so-field="per_trip_cost" required></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Value</span><input readonly class="so-input so-readonly" data-so-calc="value" value="0.00"></label>
-                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Tax Mode <span class="text-red-600">*</span></span><select name="tax_mode" class="so-input" data-so-field="tax_mode" required><option value="rcm">RCM</option><option value="hiring">HIRING</option></select></label>
-                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Normal GST Rate</span><input readonly class="so-input so-readonly" data-so-calc="gst_rate" value="0%"></label>
+                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Tax Mode <span class="text-red-600">*</span></span><select name="tax_mode" class="so-input" data-so-field="tax_mode" required><option value="rcm">RCM</option><option value="hiring">HIRING</option><option value="gst">GST</option><option value="na">NA</option></select></label>
+                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">GST Rate</span><select name="gst_rate" class="so-input" data-so-field="gst_rate"><option value="0">0%</option><option value="5">5%</option><option value="12">12%</option><option value="18">18%</option></select></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">GST Amount</span><input readonly class="so-input so-readonly" data-so-calc="gst_amount" value="0.00"></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">RCM @5% Info</span><input readonly class="so-input so-readonly" data-so-calc="rcm_amount" value="0.00"></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">Other Charges</span><input type="number" min="0" step="0.01" class="so-input" name="other_charges" data-so-field="other_charges"></label>
@@ -106,16 +106,37 @@ document.addEventListener('DOMContentLoaded',()=>{
     const num=v=>Number.isFinite(parseFloat(v))?parseFloat(v):0;
     const localToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
     const fmt=v=>num(v).toFixed(2);
-    function calc(){const value=num(field('trips_quantity').value)*num(field('per_trip_cost').value),mode=field('tax_mode').value==='hiring'?'hiring':'rcm',gstRate=mode==='hiring'?18:0,gst=value*gstRate/100,rcm=mode==='rcm'?value*.05:0,total=value+gst+num(field('other_charges').value);form.querySelector('[data-so-calc=value]').value=fmt(value);form.querySelector('[data-so-calc=gst_rate]').value=gstRate+'%';form.querySelector('[data-so-calc=gst_amount]').value=fmt(gst);form.querySelector('[data-so-calc=rcm_amount]').value=fmt(rcm);form.querySelector('[data-so-calc=total_amount]').value=fmt(total);}
-    ['trips_quantity','per_trip_cost','tax_mode','other_charges'].forEach(n=>{field(n).addEventListener('input',calc);field(n).addEventListener('change',calc);});
+    function calc(){
+        const value=num(field('trips_quantity').value)*num(field('per_trip_cost').value);
+        const rawMode=field('tax_mode').value;
+        const mode=['rcm','hiring','gst','na'].includes(rawMode)?rawMode:'rcm';
+        let gstRate=0;
+        if(mode==='hiring'){
+            gstRate=18;
+            field('gst_rate').value='18';
+        }else if(mode==='gst'){
+            gstRate=[5,12,18].includes(num(field('gst_rate').value))?num(field('gst_rate').value):5;
+            field('gst_rate').value=String(gstRate);
+        }else{
+            // RCM and NA: no normal GST is added.
+            gstRate=0;
+            field('gst_rate').value='0';
+        }
+        const gst=value*gstRate/100,rcm=mode==='rcm'?value*.05:0,total=value+gst+num(field('other_charges').value);
+        form.querySelector('[data-so-calc=value]').value=fmt(value);
+        form.querySelector('[data-so-calc=gst_amount]').value=fmt(gst);
+        form.querySelector('[data-so-calc=rcm_amount]').value=fmt(rcm);
+        form.querySelector('[data-so-calc=total_amount]').value=fmt(total);
+    }
+    ['trips_quantity','per_trip_cost','tax_mode','gst_rate','other_charges'].forEach(n=>{field(n).addEventListener('input',calc);field(n).addEventListener('change',calc);});
     field('so_number').addEventListener('input',()=>{const p=field('so_number').selectionStart;field('so_number').value=field('so_number').value.toUpperCase();try{field('so_number').setSelectionRange(p,p);}catch(e){}});
     function setSelector(button,hidden,id,label){hidden.value=id||'';button.textContent=label||'Select';button.classList.toggle('empty',!id);}
     function applyCustomerTaxDefault(item){field('tax_mode').value=String(item.gst_no||'').trim()?field('tax_mode').value:'rcm';calc();}
     function openCustomer(btn=customerBtn){MasterSelector.open({type:'customers',title:'Select Customer',opener:btn,onSelect:(item,meta)=>{setSelector(customerBtn,field('customer_id'),item.id,item.label||item.name);applyCustomerTaxDefault(item);setTimeout(()=>meta?.source==='quick-add'?customerBtn.focus():field('from_location').focus(),20);}});}
     customerBtn.addEventListener('click',()=>openCustomer(customerBtn)); document.getElementById('addSoCustomerBtn').addEventListener('click',e=>MasterSelector.open({type:'customers',title:'Add Customer',opener:e.currentTarget,allowAdd:true,forceAdd:true,onSelect:item=>{setSelector(customerBtn,field('customer_id'),item.id,item.label||item.name);applyCustomerTaxDefault(item);setTimeout(()=>customerBtn.focus(),20);}}));
-    function reset(){form.reset();methodSlot.innerHTML='';form.action=storeUrl;field('so_date').value=localToday();field('tax_mode').value='hiring';field('is_active').checked=true;setSelector(customerBtn,field('customer_id'),null,'Select Customer');field('other_charges').value='';calc();}
+    function reset(){form.reset();methodSlot.innerHTML='';form.action=storeUrl;field('so_date').value=localToday();field('tax_mode').value='hiring';field('gst_rate').value='18';field('is_active').checked=true;setSelector(customerBtn,field('customer_id'),null,'Select Customer');field('other_charges').value='';calc();}
     function openCreate(origin=addBtn){opener=origin||document.activeElement;reset();title.textContent='Add SO';modal.classList.remove('hidden');setTimeout(()=>field('so_number').focus(),20);}
-    function openEdit(btn){opener=btn;let r={};try{r=JSON.parse(btn.dataset.record||'{}');}catch(error){window.AppToast?.('Unable to open this Sales Order. Please refresh and try again.','error');return;}reset();form.action=baseUrl+'/'+btn.dataset.id;methodSlot.innerHTML='<input type="hidden" name="_method" value="PUT">';title.textContent='Edit SO';['so_number','so_date','from_location','to_location','description','trips_quantity','per_trip_cost','other_charges'].forEach(n=>field(n).value=r[n]??'');field('tax_mode').value=r.tax_mode==='hiring'?'hiring':'rcm';field('is_active').checked=!!r.is_active;setSelector(customerBtn,field('customer_id'),r.customer_id,r.customer_name||'Select Customer');calc();modal.classList.remove('hidden');setTimeout(()=>field('so_number').focus(),20);}
+    function openEdit(btn){opener=btn;let r={};try{r=JSON.parse(btn.dataset.record||'{}');}catch(error){window.AppToast?.('Unable to open this Sales Order. Please refresh and try again.','error');return;}reset();form.action=baseUrl+'/'+btn.dataset.id;methodSlot.innerHTML='<input type="hidden" name="_method" value="PUT">';title.textContent='Edit SO';['so_number','so_date','from_location','to_location','description','trips_quantity','per_trip_cost','other_charges'].forEach(n=>field(n).value=r[n]??'');field('tax_mode').value=['rcm','hiring','gst','na'].includes(r.tax_mode)?r.tax_mode:'rcm';field('gst_rate').value=String(r.gst_rate??0);field('is_active').checked=!!r.is_active;setSelector(customerBtn,field('customer_id'),r.customer_id,r.customer_name||'Select Customer');calc();modal.classList.remove('hidden');setTimeout(()=>field('so_number').focus(),20);}
     function close(){modal.classList.add('hidden');const back=opener;opener=null;setTimeout(()=>back?.focus?.(),0);}
     addBtn.addEventListener('click',()=>openCreate(addBtn));document.querySelectorAll('.edit-so').forEach(b=>b.addEventListener('click',()=>openEdit(b)));document.getElementById('soClose').addEventListener('click',close);document.getElementById('soCancel').addEventListener('click',close);modal.addEventListener('mousedown',e=>{if(e.target===modal)close();});
     form.addEventListener('keydown',e=>{

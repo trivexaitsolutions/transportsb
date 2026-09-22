@@ -26,9 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (QueryException $e, Request $request) {
             $message = 'This action cannot be completed because the record is already in use or linked to another entry.';
             if ($request->expectsJson()) {
-                return response()->json(['message' => $message], 409);
+                return response()->json(['message' => [$message,json_encode($e)]], 409);
             }
-            return back()->with('error', $message);
+            return back()->with('error', [$message,json_encode($e)]);
         });
 
         $exceptions->render(function (\Throwable $e, Request $request) {
