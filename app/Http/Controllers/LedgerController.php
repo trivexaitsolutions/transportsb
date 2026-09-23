@@ -85,7 +85,7 @@ class LedgerController extends Controller
             ->whereDate('invoice_date', '<', $fromDate)
             ->sum('total_amount');
 
-        $previousOutstanding -= (float) CustomerPartyPayment::query()
+        $previousOutstanding -= (float) CustomerPartyPayment::query()->posted()
             ->where('customer_id', $customer->id)
             ->whereDate('payment_date', '<', $fromDate)
             ->sum('amount');
@@ -116,7 +116,7 @@ class LedgerController extends Controller
                 ));
             });
 
-        CustomerPartyPayment::query()
+        CustomerPartyPayment::query()->posted()
             ->where('customer_id', $customer->id)
             ->whereBetween('payment_date', [$fromDate, $toDate])
             ->orderBy('payment_date')
@@ -172,7 +172,7 @@ class LedgerController extends Controller
             ->whereDate('lr_date', '<', $fromDate)
             ->sum('advance_paid');
 
-        $previousOutstanding -= (float) SupplierPartyPayment::query()
+        $previousOutstanding -= (float) SupplierPartyPayment::query()->posted()
             ->where('supplier_id', $supplier->id)
             ->whereDate('payment_date', '<', $fromDate)
             ->sum('amount');
@@ -218,7 +218,7 @@ class LedgerController extends Controller
                 }
             });
 
-        SupplierPartyPayment::query()
+        SupplierPartyPayment::query()->posted()
             ->where('supplier_id', $supplier->id)
             ->whereBetween('payment_date', [$fromDate, $toDate])
             ->orderBy('payment_date')

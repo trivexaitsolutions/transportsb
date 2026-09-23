@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\CustomerPayment;
 use App\Models\InvoiceAttachment;
@@ -25,7 +26,15 @@ class BillingController extends Controller
     public function index(Request $request): View
     {
         $selectedCustomer = $request->integer('customer_id') ? Customer::find($request->integer('customer_id')) : null;
-        $selectedOrder = $request->integer('sales_order_id') ? SalesOrder::with('customer')->find($request->integer('sales_order_id')) : null;
+        $selectedOrder = $request->integer('sales_order_id')
+            ? SalesOrder::with('customer:id,name,code')->find($request->integer('sales_order_id'))
+            : null;
+
+        // Voucher -> Billing shortcut only needs the SO id. Resolve its customer
+        // automatically so both Billing selectors are populated together.
+        if ($selectedOrder && (!$selectedCustomer || $selectedCustomer->id !== $selectedOrder->customer_id)) {
+            $selectedCustomer = $selectedOrder->customer;
+        }
 
         return view('sale.billing.index', compact('selectedCustomer', 'selectedOrder'));
     }
@@ -480,8 +489,27 @@ class BillingController extends Controller
             'customer', 'salesOrder',
             'items.voucher.transportName', 'items.voucher.vehicleType', 'items.voucher.supplier',
         ])->loadSum('payments as paid_amount', 'amount');
+
+        // Billing currently allows the user to choose the voucher rows. As requested,
+        // the invoice company is taken from the first selected voucher; the user is
+        // responsible for selecting vouchers from only one company in a bill.
+        $company = $invoice->items
+            ->map(fn ($item) => $item->voucher?->transportName)
+            ->filter()
+            ->first();
+
+        $companyBank = null;
+        if ($company) {
+            $companyBank = Bank::query()
+                ->where('transport_name_id', $company->id)
+                ->where('is_active', true)
+                ->orderByDesc('is_default')
+                ->orderBy('id')
+                ->first();
+        }
+
         $printSettings = PrintSetting::current();
-        return view('sale.billing.print', compact('invoice','printSettings'));
+        return view('sale.billing.print', compact('invoice', 'printSettings', 'company', 'companyBank'));
     }
 
     private function taxAmounts(?string $mode, float $freight, float $otherCharges, float $selectedGstRate = 0.0): array

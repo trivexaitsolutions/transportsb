@@ -59,7 +59,8 @@
                 </button>
                 <div class="absolute left-0 top-full z-50 hidden w-64 border border-slate-200 bg-white py-1 text-slate-800 shadow-xl" data-nav-menu>
                     <a href="{{ route('payments.suppliers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Supplier Payment</a>
-                    <a href="{{ route('payments.customers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Customer Payment</a>
+                    <a href="{{ route('payments.customers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Customer Receipt</a>
+                    <a href="{{ route('payments.bank.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Bank</a>
                     <div class="my-1 border-t border-slate-200"></div>
                     <a href="{{ route('ledgers.suppliers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Supplier Ledger</a>
                     <a href="{{ route('ledgers.customers.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Customer Ledger</a>
@@ -78,6 +79,8 @@
                     <a href="{{ route('masters.index', ['type' => 'vehicle-types']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Vehicle Types</a>
                     <a href="{{ route('masters.index', ['type' => 'transport-names']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Transport Names</a>
                     <a href="{{ route('masters.index', ['type' => 'gst-rates']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">GST Master</a>
+                    <a href="{{ route('masters.index', ['type' => 'banks']) }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Bank Master</a>
+                    <a href="{{ route('masters.so-series.index') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">SO Number Series</a>
                     <a href="{{ route('masters.settings') }}" data-nav-subitem class="block px-4 py-2.5 text-sm font-medium outline-none hover:bg-emerald-50 hover:text-emerald-800 focus:bg-amber-100">Settings</a>
                 </div>
             </div>

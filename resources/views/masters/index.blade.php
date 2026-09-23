@@ -37,6 +37,16 @@
                         <td class="font-bold">{{ $item->name }}</td><td>{{ $item->description ?: '-' }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @elseif($type==='gst-rates')
                         <td class="font-bold">{{ $item->name }}</td><td>{{ rtrim(rtrim(number_format((float)$item->rate,2,'.',''),'0'),'.') }}%</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
+                    @elseif($type==='transport-names')
+                        <td class="font-bold">{{ $item->name }}</td><td>{{ $item->gst_no ?: '-' }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
+                    @elseif($type==='banks')
+                        <td class="font-bold">{{ $item->transportName?->name ?: '-' }}</td>
+                        <td class="font-bold">{{ $item->name }}</td>
+                        <td>{{ $item->account_number ?: '-' }}</td>
+                        <td>{{ $item->ifsc_code ?: '-' }}</td>
+                        <td>₹{{ number_format((float)$item->opening_balance,2) }}</td>
+                        <td><span class="font-bold {{ $item->is_default?'text-emerald-700':'text-slate-400' }}">{{ $item->is_default?'Default':'-' }}</span></td>
+                        <td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @else
                         <td class="font-bold">{{ $item->name }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @endif

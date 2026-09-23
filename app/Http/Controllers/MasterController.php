@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Bank;
 use App\Models\Customer;
 use App\Models\GstRate;
 use App\Models\PrintSetting;
@@ -12,6 +13,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -25,6 +27,9 @@ class MasterController extends Controller
         $search = trim($request->string('search')->toString());
 
         $query = $model::query();
+        if ($type === 'banks') {
+            $query->with('transportName:id,name,gst_no');
+        }
 
         if ($search !== '') {
             $query->where(function ($q) use ($search, $type) {
@@ -33,7 +38,16 @@ class MasterController extends Controller
                 if (in_array($type, ['customers', 'suppliers'], true)) {
                     $q->orWhere('code', 'like', '%'.$search.'%')
                         ->orWhere('phone', 'like', '%'.$search.'%')
-                        ->orWhere('gst_no', 'like', '%'.$search.'%');
+                        ->orWhere('gst_no', 'like', '%'.$search.'%')
+                        ->orWhere('pan_no', 'like', '%'.$search.'%');
+                } elseif ($type === 'transport-names') {
+                    $q->orWhere('gst_no', 'like', '%'.$search.'%');
+                } elseif ($type === 'banks') {
+                    $q->orWhere('account_holder_name', 'like', '%'.$search.'%')
+                        ->orWhere('account_number', 'like', '%'.$search.'%')
+                        ->orWhere('ifsc_code', 'like', '%'.$search.'%')
+                        ->orWhere('branch_name', 'like', '%'.$search.'%')
+                        ->orWhereHas('transportName', fn ($company) => $company->where('name', 'like', '%'.$search.'%'));
                 }
             });
         }
@@ -53,7 +67,13 @@ class MasterController extends Controller
             $data['code'] = $this->nextCustomerCode();
         }
 
-        $item = $model::query()->create($data);
+        $item = DB::transaction(function () use ($model, $data, $type, $request) {
+            $item = $model::query()->create($data);
+            if ($type === 'banks') {
+                $this->syncBankDefault($item, $request->boolean('is_default'));
+            }
+            return $item;
+        });
         $message = $config['singular'].' added successfully.';
 
         if ($request->expectsJson()) {
@@ -70,7 +90,18 @@ class MasterController extends Controller
     {
         [$model, $config] = $this->definition($type);
         $item = $model::query()->findOrFail($id);
-        $item->update($this->validateMaster($request, $type, $id));
+        $oldCompanyId = $type === 'banks' ? (int) ($item->transport_name_id ?? 0) : 0;
+        $data = $this->validateMaster($request, $type, $id);
+
+        DB::transaction(function () use ($item, $data, $type, $request, $oldCompanyId) {
+            $item->update($data);
+            if ($type === 'banks') {
+                $this->syncBankDefault($item->fresh(), $request->boolean('is_default'));
+                if ($oldCompanyId && $oldCompanyId !== (int) $item->transport_name_id) {
+                    $this->ensureCompanyHasDefaultBank($oldCompanyId);
+                }
+            }
+        });
 
         return back()->with('success', $config['singular'].' updated successfully.');
     }
@@ -80,8 +111,14 @@ class MasterController extends Controller
         [$model, $config] = $this->definition($type);
         $item = $model::query()->findOrFail($id);
 
+        $oldCompanyId = $type === 'banks' ? (int) ($item->transport_name_id ?? 0) : 0;
         try {
-            $item->delete();
+            DB::transaction(function () use ($item, $type, $oldCompanyId) {
+                $item->delete();
+                if ($type === 'banks' && $oldCompanyId) {
+                    $this->ensureCompanyHasDefaultBank($oldCompanyId);
+                }
+            });
         } catch (QueryException) {
             return back()->with('error', $config['singular'].' is already in use. Make it inactive instead of deleting it.');
         }
@@ -185,10 +222,10 @@ class MasterController extends Controller
                     ['name' => 'phone', 'label' => 'Phone', 'type' => 'text'],
                     ['name' => 'email', 'label' => 'Email', 'type' => 'email'],
                     ['name' => 'gst_no', 'label' => 'GST No.', 'type' => 'text'],
+                    ['name' => 'pan_no', 'label' => 'PAN', 'type' => 'text'],
                     ['name' => 'opening_balance', 'label' => 'Opening Balance', 'type' => 'number'],
                     ['name' => 'address', 'label' => 'Address', 'type' => 'textarea', 'wide' => true],
-                    ['name' => 'is_government_employee', 'label' => 'RCM', 'type' => 'checkbox', 'wide' => true, 'default' => false],
-                    ['name' => 'bill_note', 'label' => 'Bill Note', 'type' => 'textarea', 'wide' => true, 'default' => 'GST @5% WILL BE PAID BY SERVICE USER UNDER RCM (If Applicable)'],
+                    ['name' => 'business_type', 'label' => 'Business Type', 'type' => 'select', 'required' => true, 'options' => ['b2b' => 'B2B', 'b2c' => 'B2C', 'government' => 'Government']],
                     ['name' => 'is_active', 'label' => 'Active', 'type' => 'checkbox', 'default' => true],
                 ],
             ]],
@@ -232,12 +269,30 @@ class MasterController extends Controller
                 ],
             ]],
             'transport-names' => [TransportName::class, [
-                'title' => 'Transport Names',
-                'singular' => 'Transport Name',
-                'columns' => ['Name', 'Status'],
+                'title' => 'Transport Names / Companies',
+                'singular' => 'Transport Name / Company',
+                'columns' => ['Name', 'GST No.', 'Status'],
                 'fields' => [
-                    ['name' => 'name', 'label' => 'Transport Name', 'type' => 'text', 'required' => true],
+                    ['name' => 'name', 'label' => 'Transport Name / Company', 'type' => 'text', 'required' => true],
+                    ['name' => 'gst_no', 'label' => 'Company GST No.', 'type' => 'text'],
                     ['name' => 'is_active', 'label' => 'Active', 'type' => 'checkbox'],
+                ],
+            ]],
+            'banks' => [Bank::class, [
+                'title' => 'Bank Master',
+                'singular' => 'Bank',
+                'columns' => ['Company', 'Bank Name', 'A/C No.', 'IFSC', 'Opening Balance', 'Default', 'Status'],
+                'fields' => [
+                    ['name' => 'transport_name_id', 'label' => 'Company', 'type' => 'select', 'required' => true, 'options' => TransportName::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id')->all()],
+                    ['name' => 'name', 'label' => 'Bank Name', 'type' => 'text', 'required' => true],
+                    ['name' => 'account_holder_name', 'label' => 'Account Holder Name', 'type' => 'text'],
+                    ['name' => 'account_number', 'label' => 'Account Number', 'type' => 'text'],
+                    ['name' => 'ifsc_code', 'label' => 'IFSC Code', 'type' => 'text'],
+                    ['name' => 'branch_name', 'label' => 'Branch', 'type' => 'text'],
+                    ['name' => 'bank_address', 'label' => 'Bank Address', 'type' => 'textarea', 'wide' => true],
+                    ['name' => 'opening_balance', 'label' => 'Opening Balance', 'type' => 'number', 'required' => true],
+                    ['name' => 'is_default', 'label' => 'Default Bank for this Company', 'type' => 'checkbox', 'wide' => true, 'default' => false],
+                    ['name' => 'is_active', 'label' => 'Active', 'type' => 'checkbox', 'default' => true],
                 ],
             ]],
             default => abort(404),
@@ -277,6 +332,7 @@ class MasterController extends Controller
             'code' => $item->code ?? null,
             'gst_no' => $item->gst_no ?? null,
             'rate' => $item->rate ?? null,
+            'opening_balance' => $item->opening_balance ?? null,
             'label' => $label,
         ];
     }
@@ -294,9 +350,9 @@ class MasterController extends Controller
                 'phone' => ['nullable', 'string', 'max:30'],
                 'email' => ['nullable', 'email', 'max:255'],
                 'gst_no' => ['nullable', 'string', 'max:30'],
+                'pan_no' => ['nullable', 'string', 'max:20'],
                 'address' => ['nullable', 'string', 'max:2000'],
-                'is_government_employee' => ['nullable', 'boolean'],
-                'bill_note' => ['nullable', 'string', 'max:2000'],
+                'business_type' => ['required', Rule::in(['b2b', 'b2c', 'government'])],
                 'opening_balance' => ['nullable', 'numeric'],
             ];
 
@@ -321,15 +377,36 @@ class MasterController extends Controller
             $base['description'] = ['nullable', 'string', 'max:255'];
         } elseif ($type === 'transport-names') {
             $base['name'][] = Rule::unique('transport_names', 'name')->ignore($id);
+            $base['gst_no'] = ['nullable', 'string', 'max:30'];
         } elseif ($type === 'gst-rates') {
             $base['name'][] = Rule::unique('gst_rates', 'name')->ignore($id);
             $base['rate'] = ['required', 'numeric', 'min:0', 'max:100', Rule::unique('gst_rates', 'rate')->ignore($id)];
+        } elseif ($type === 'banks') {
+            $companyId = (int) $request->input('transport_name_id');
+            $base['transport_name_id'] = ['required', 'integer', Rule::exists('transport_names', 'id')->where(fn ($q) => $q->where('is_active', true))];
+            $base['name'][] = Rule::unique('banks', 'name')->where(fn ($q) => $q->where('transport_name_id', $companyId))->ignore($id);
+            $base['account_holder_name'] = ['nullable', 'string', 'max:255'];
+            $base['account_number'] = ['nullable', 'string', 'max:100'];
+            $base['ifsc_code'] = ['nullable', 'string', 'max:30'];
+            $base['branch_name'] = ['nullable', 'string', 'max:255'];
+            $base['bank_address'] = ['nullable', 'string', 'max:1000'];
+            $base['opening_balance'] = ['required', 'numeric'];
+            $base['is_default'] = ['nullable', 'boolean'];
         }
 
         $data = $request->validate($base);
         $data['is_active'] = $request->boolean('is_active');
+        if ($type === 'banks') {
+            $data['is_default'] = $request->boolean('is_default');
+            $data['ifsc_code'] = filled($data['ifsc_code'] ?? null) ? strtoupper(trim($data['ifsc_code'])) : null;
+            $data['account_number'] = filled($data['account_number'] ?? null) ? trim($data['account_number']) : null;
+        }
+        if ($type === 'transport-names') {
+            $data['gst_no'] = filled($data['gst_no'] ?? null) ? strtoupper(trim($data['gst_no'])) : null;
+        }
 
         if ($type === 'customers') {
+            $data['pan_no'] = filled($data['pan_no'] ?? null) ? strtoupper(trim($data['pan_no'])) : null;
             $data['is_government_employee'] = $request->boolean('is_government_employee');
             if (!$data['is_government_employee']) {
                 $data['bill_note'] = null;
@@ -344,4 +421,86 @@ class MasterController extends Controller
 
         return $data;
     }
+    private function syncBankDefault(Bank $bank, bool $requestedDefault): void
+    {
+        $companyId = (int) $bank->transport_name_id;
+        if (! $companyId) {
+            return;
+        }
+
+        if (! $bank->is_active) {
+            if ($bank->is_default) {
+                $bank->forceFill(['is_default' => false])->saveQuietly();
+            }
+            $this->ensureCompanyHasDefaultBank($companyId);
+            return;
+        }
+
+        if ($requestedDefault) {
+            Bank::query()->where('transport_name_id', $companyId)->whereKeyNot($bank->id)->update(['is_default' => false]);
+            if (! $bank->is_default) {
+                $bank->forceFill(['is_default' => true])->saveQuietly();
+            }
+            return;
+        }
+
+        $otherDefault = Bank::query()
+            ->where('transport_name_id', $companyId)
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->whereKeyNot($bank->id)
+            ->first();
+
+        if ($otherDefault) {
+            if ($bank->is_default) {
+                $bank->forceFill(['is_default' => false])->saveQuietly();
+            }
+            return;
+        }
+
+        $replacement = Bank::query()
+            ->where('transport_name_id', $companyId)
+            ->where('is_active', true)
+            ->whereKeyNot($bank->id)
+            ->orderBy('id')
+            ->first();
+
+        if ($replacement) {
+            if ($bank->is_default) {
+                $bank->forceFill(['is_default' => false])->saveQuietly();
+            }
+            $replacement->forceFill(['is_default' => true])->saveQuietly();
+        } elseif (! $bank->is_default) {
+            // A company with only one active bank should always have that bank as default.
+            $bank->forceFill(['is_default' => true])->saveQuietly();
+        }
+    }
+
+    private function ensureCompanyHasDefaultBank(int $companyId): void
+    {
+        if ($companyId <= 0) {
+            return;
+        }
+
+        $hasDefault = Bank::query()
+            ->where('transport_name_id', $companyId)
+            ->where('is_active', true)
+            ->where('is_default', true)
+            ->exists();
+
+        if ($hasDefault) {
+            return;
+        }
+
+        $fallback = Bank::query()
+            ->where('transport_name_id', $companyId)
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->first();
+
+        if ($fallback) {
+            $fallback->forceFill(['is_default' => true])->saveQuietly();
+        }
+    }
+
 }

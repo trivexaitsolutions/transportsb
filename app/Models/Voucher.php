@@ -10,7 +10,7 @@ class Voucher extends Model
 {
     protected $fillable = [
         'sr_no', 'lr_date', 'sales_order_id', 'transport_name_id', 'lr_no', 'vehicle_type_id',
-        'lorry_number', 'supplier_id', 'supplier_freight', 'advance_paid', 'hamali_loading',
+        'lorry_number', 'supplier_id', 'supplier_freight', 'advance_paid', 'advance_mode', 'hamali_loading',
         'hamali_unloading', 'other_charges', 'remarks', 'description', 'created_by',
     ];
 
@@ -31,6 +31,7 @@ class Voucher extends Model
     public function vehicleType(): BelongsTo { return $this->belongsTo(VehicleType::class); }
     public function supplier(): BelongsTo { return $this->belongsTo(Supplier::class); }
     public function supplierPayments(): HasMany { return $this->hasMany(SupplierPayment::class); }
+    public function supplierPartyPayments(): HasMany { return $this->hasMany(SupplierPartyPayment::class); }
     public function attachments(): HasMany { return $this->hasMany(VoucherAttachment::class); }
     public function invoiceItem(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(InvoiceItem::class); }
 }

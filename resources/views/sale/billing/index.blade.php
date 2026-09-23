@@ -83,7 +83,10 @@ document.addEventListener('DOMContentLoaded',()=>{
     const routes={data:@json(route('sale.billing.data')),soOptions:@json(route('sale.billing.so-options')),store:@json(route('sale.billing.store')),base:@json(url('/sale/bills'))};
     const customerBtn=document.getElementById('customerBtn'),soBtn=document.getElementById('soBtn'),tripBody=document.getElementById('tripBody'),invoiceBody=document.getElementById('invoiceBody'),tripWrap=document.getElementById('tripWrap');
     const footerStatus=document.getElementById('footerStatus'),headerStatus=document.getElementById('headerStatus'),checkAllBtn=document.getElementById('checkAllBtn'),createBillBtn=document.getElementById('createBillBtn'),cancelEditBtn=document.getElementById('cancelEditBtn'),attachmentPicker=document.getElementById('lrAttachmentPicker');
-    const initialEditId=Number(new URL(window.location.href).searchParams.get('edit_invoice_id'))||null;
+    const initialParams=new URL(window.location.href).searchParams;
+    const initialEditId=Number(initialParams.get('edit_invoice_id'))||null;
+    let initialVoucherId=Number(initialParams.get('voucher_id'))||null;
+    let shortcutSelectionApplied=false;
     let state={customerId:Number(customerBtn.dataset.customerId)||null,customerName:customerBtn.textContent.trim(),soId:Number(soBtn.dataset.soId)||null,order:null,trips:[],invoices:[],selected:new Set(),tripOpener:null,editOpener:null,editReturn:null,printOpener:null,editingInvoiceId:initialEditId,editingInvoice:null,pendingFiles:new Map(),removedAttachmentIds:new Set(),attachmentVoucherId:null};
     const money=n=>'₹'+Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
     const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
@@ -111,7 +114,26 @@ document.addEventListener('DOMContentLoaded',()=>{
         try{setStatus('Loading...');const r=await fetch(u,{headers:{Accept:'application/json'}}),d=await responseData(r,'Unable to load billing data.');if(!r.ok)throw new Error(d.message||'Unable to load billing data');
             if(d.customer){state.customerId=Number(d.customer.id);state.customerName=d.customer.name;customerBtn.dataset.customerId=d.customer.id;customerBtn.textContent=d.customer.name;customerBtn.classList.remove('empty');soBtn.disabled=false;}
             state.order=d.order;state.trips=d.trips||[];state.invoices=d.invoices||[];state.editingInvoice=d.editing_invoice||null;if(state.order){state.soId=Number(state.order.id);soBtn.dataset.soId=state.order.id;soBtn.textContent=state.order.so_number;soBtn.classList.remove('empty');}
-            state.selected=new Set([...state.selected].filter(id=>state.trips.some(t=>t.id===id&&!t.billed)));renderAll();syncButtons();updateUrl();setStatus(state.editingInvoice?`Editing ${state.editingInvoice.bill_no} · ${state.trips.length} trip(s) loaded`:state.order?`${state.order.pending_count} truck(s) pending billing`:'Ready','ok');if(focusTrips)setTimeout(()=>focusFirstPending(),20);return true;
+            state.selected=new Set([...state.selected].filter(id=>state.trips.some(t=>t.id===id&&!t.billed)));
+            let shortcutVoucher=null;
+            if(!state.editingInvoiceId&&initialVoucherId){
+                shortcutVoucher=state.trips.find(t=>Number(t.id)===Number(initialVoucherId))||null;
+                if(shortcutVoucher&&!shortcutVoucher.billed){
+                    state.selected.add(Number(shortcutVoucher.id));
+                    shortcutSelectionApplied=true;
+                }else if(shortcutVoucher?.billed){
+                    window.AppToast?.(`LR ${shortcutVoucher.lr_no||shortcutVoucher.sr_no} is already billed.`,'warning',4500);
+                }
+                initialVoucherId=null;
+                const cleanUrl=new URL(window.location.href);
+                cleanUrl.searchParams.delete('voucher_id');
+                history.replaceState({},'',cleanUrl.pathname+cleanUrl.search);
+            }
+            renderAll();syncButtons();updateUrl();setStatus(state.editingInvoice?`Editing ${state.editingInvoice.bill_no} · ${state.trips.length} trip(s) loaded`:state.order?`${state.order.pending_count} truck(s) pending billing`:'Ready','ok');
+            if(shortcutSelectionApplied&&shortcutVoucher){
+                setTimeout(()=>{const c=tripBody.querySelector(`[data-trip-check="${shortcutVoucher.id}"]`);const row=tripBody.querySelector(`[data-voucher-row="${shortcutVoucher.id}"]`);row?.scrollIntoView({block:'center',inline:'nearest'});c?.focus();},30);
+            }else if(focusTrips)setTimeout(()=>focusFirstPending(),20);
+            return true;
         }catch(err){setStatus(err.message||'Unable to load','error');window.AppToast?.(err.message||'Unable to load billing data.','error');return false;}
     }
     function renderAll(){renderSummary();renderTrips();renderInvoices();updateSelectionStatus();}
@@ -182,7 +204,7 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById('closeBilling').addEventListener('click',()=>window.AppPageExit?.('#nav-sale'));
     window.addEventListener('keydown',e=>{if(!printModal.classList.contains('hidden')){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closePrint();}return;}if(!billModal.classList.contains('hidden')){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closeBill();}return;}if(e.altKey&&e.key.toLowerCase()==='a'){e.preventDefault();toggleAll();return;}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='b'){e.preventDefault();openBill();return;}});
 
-    syncButtons();loadData(false).then(()=>{if(!state.customerId)setTimeout(()=>customerBtn.focus(),30);else if(!state.soId&&!state.editingInvoiceId)setTimeout(()=>soBtn.focus(),30);else if(!state.editingInvoiceId)setTimeout(()=>focusFirstPending(),30);});
+    syncButtons();loadData(false).then(()=>{if(shortcutSelectionApplied)return;if(!state.customerId)setTimeout(()=>customerBtn.focus(),30);else if(!state.soId&&!state.editingInvoiceId)setTimeout(()=>soBtn.focus(),30);else if(!state.editingInvoiceId)setTimeout(()=>focusFirstPending(),30);});
 });
 </script>
 @endpush

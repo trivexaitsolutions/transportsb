@@ -7,6 +7,8 @@ use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BillingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\BankTransactionController;
+use App\Http\Controllers\SoNumberSeriesController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('sale.orders.index') : redirect()->route('login'));
@@ -49,12 +51,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/suppliers', [PaymentController::class, 'supplierIndex'])->name('suppliers.index');
         Route::post('/suppliers', [PaymentController::class, 'supplierStore'])->name('suppliers.store');
         Route::get('/suppliers/{payment}/attachment', [PaymentController::class, 'supplierAttachment'])->name('suppliers.attachment');
+        Route::patch('/suppliers/{payment}/cheque-status', [PaymentController::class, 'supplierChequeStatus'])->name('suppliers.cheque-status');
         Route::delete('/suppliers/{payment}', [PaymentController::class, 'supplierDestroy'])->name('suppliers.destroy');
 
         Route::get('/customers', [PaymentController::class, 'customerIndex'])->name('customers.index');
         Route::post('/customers', [PaymentController::class, 'customerStore'])->name('customers.store');
         Route::get('/customers/{payment}/attachment', [PaymentController::class, 'customerAttachment'])->name('customers.attachment');
+        Route::patch('/customers/{payment}/cheque-status', [PaymentController::class, 'customerChequeStatus'])->name('customers.cheque-status');
         Route::delete('/customers/{payment}', [PaymentController::class, 'customerDestroy'])->name('customers.destroy');
+
+        Route::get('/bank', [BankTransactionController::class, 'index'])->name('bank.index');
+        Route::post('/bank', [BankTransactionController::class, 'store'])->name('bank.store');
+        Route::delete('/bank/{transaction}', [BankTransactionController::class, 'destroy'])->name('bank.destroy');
     });
 
     Route::prefix('ledgers')->name('ledgers.')->group(function () {
@@ -63,6 +71,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('masters')->name('masters.')->group(function () {
+        Route::get('/so-number-series', [SoNumberSeriesController::class, 'index'])->name('so-series.index');
+        Route::post('/so-number-series', [SoNumberSeriesController::class, 'store'])->name('so-series.store');
+        Route::put('/so-number-series/{series}', [SoNumberSeriesController::class, 'update'])->name('so-series.update');
+        Route::delete('/so-number-series/{series}', [SoNumberSeriesController::class, 'destroy'])->name('so-series.destroy');
+
         Route::get('/settings', [MasterController::class, 'settings'])->name('settings');
         Route::put('/settings', [MasterController::class, 'updateSettings'])->name('settings.update');
         Route::get('/options/{type}', [MasterController::class, 'options'])->name('options');

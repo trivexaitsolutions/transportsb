@@ -23,6 +23,14 @@ class VoucherController extends Controller
             $to = $today;
         }
 
+        $initialOrder = null;
+        $initialOrderId = $request->integer('sales_order_id') ?: null;
+        if ($initialOrderId) {
+            $initialOrder = SalesOrder::query()
+                ->with('customer:id,name,code')
+                ->find($initialOrderId);
+        }
+
         $entries = Voucher::query()
             ->whereBetween('lr_date', [$from, $to])
             ->with([
@@ -33,6 +41,7 @@ class VoucherController extends Controller
                 'supplier:id,name,code',
             ])
             ->withSum('supplierPayments as supplier_payments_total', 'amount')
+            ->withSum('supplierPartyPayments as supplier_party_payments_total', 'amount')
             ->orderBy('lr_date')->orderBy('id')->get();
 
         $rows = $entries->map(fn (Voucher $voucher) => $this->rowPayload($voucher))->values();
@@ -49,6 +58,15 @@ class VoucherController extends Controller
             'fromDate' => $from,
             'toDate' => $to,
             'rows' => $rows,
+            'initialOrder' => $initialOrder ? [
+                'id' => $initialOrder->id,
+                'so_number' => $initialOrder->so_number,
+                'customer_id' => $initialOrder->customer_id,
+                'customer_name' => $initialOrder->customer?->name,
+                'from_location' => $initialOrder->from_location,
+                'to_location' => $initialOrder->to_location,
+                'per_trip_cost' => (float) $initialOrder->per_trip_cost,
+            ] : null,
         ]);
     }
 
@@ -68,6 +86,7 @@ class VoucherController extends Controller
             'rows.*.supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'rows.*.supplier_freight' => ['nullable', 'numeric', 'min:0'],
             'rows.*.advance_paid' => ['nullable', 'numeric', 'min:0'],
+            'rows.*.advance_mode' => ['nullable', 'string', 'max:50', 'in:Cash,NEFT,RTGS,UPI,Cheque,Bank Transfer,Other'],
             'rows.*.hamali_loading' => ['nullable', 'numeric', 'min:0'],
             'rows.*.hamali_unloading' => ['nullable', 'numeric', 'min:0'],
             'rows.*.other_charges' => ['nullable', 'numeric', 'min:0'],
@@ -108,9 +127,13 @@ class VoucherController extends Controller
                 if ($advance > $supplierFreight) {
                     throw ValidationException::withMessages(['rows.'.$index.'.advance_paid' => 'Advance cannot exceed Supplier Freight.']);
                 }
+                if ($advance > 0 && empty($row['advance_mode'])) {
+                    throw ValidationException::withMessages(['rows.'.$index.'.advance_mode' => 'Select Advance Mode when an advance amount is entered.']);
+                }
 
                 if ($voucher) {
-                    $paid = (float) $voucher->supplierPayments()->sum('amount');
+                    $paid = (float) $voucher->supplierPayments()->sum('amount')
+                        + (float) $voucher->supplierPartyPayments()->sum('amount');
                     if ($advance + $paid > $supplierFreight) {
                         throw ValidationException::withMessages(['rows.'.$index.'.supplier_freight' => 'Supplier Freight cannot be lower than Advance + Supplier Payments already recorded.']);
                     }
@@ -126,6 +149,7 @@ class VoucherController extends Controller
                     'supplier_id' => $row['supplier_id'] ?? null,
                     'supplier_freight' => $supplierFreight,
                     'advance_paid' => $advance,
+                    'advance_mode' => $advance > 0 ? $this->text($row['advance_mode'] ?? null) : null,
                     'hamali_loading' => $this->num($row['hamali_loading'] ?? null),
                     'hamali_unloading' => $this->num($row['hamali_unloading'] ?? null),
                     'other_charges' => $this->num($row['other_charges'] ?? null),
@@ -166,7 +190,7 @@ class VoucherController extends Controller
             ], 422);
         }
 
-        if ($voucher->supplierPayments()->exists()) {
+        if ($voucher->supplierPayments()->exists() || $voucher->supplierPartyPayments()->exists()) {
             return response()->json([
                 'message' => 'Supplier payments exist for this trip. Delete those payments first.',
             ], 422);
@@ -203,7 +227,8 @@ class VoucherController extends Controller
 
         DB::transaction(function () use ($voucher, $data, $request): void {
             $locked = Voucher::query()->lockForUpdate()->findOrFail($voucher->id);
-            $alreadyPaid = (float) $locked->supplierPayments()->sum('amount');
+            $alreadyPaid = (float) $locked->supplierPayments()->sum('amount')
+                + (float) $locked->supplierPartyPayments()->sum('amount');
             $balance = max(0, (float) $locked->supplier_freight - (float) $locked->advance_paid - $alreadyPaid);
             if ((float) $data['amount'] > $balance + 0.0001) {
                 throw ValidationException::withMessages(['amount' => 'Payment cannot exceed current Supplier Balance of ₹'.number_format($balance, 2).'.']);
@@ -232,7 +257,8 @@ class VoucherController extends Controller
     private function paymentPayload(Voucher $voucher, $items): array
     {
         $voucher->refresh();
-        $paid = (float) $voucher->supplierPayments()->sum('amount');
+        $paid = (float) $voucher->supplierPayments()->sum('amount')
+            + (float) $voucher->supplierPartyPayments()->sum('amount');
         $freight = (float) $voucher->supplier_freight;
         $advance = (float) $voucher->advance_paid;
         return [
@@ -247,7 +273,8 @@ class VoucherController extends Controller
 
     private function rowPayload(Voucher $voucher): array
     {
-        $paid = (float) ($voucher->supplier_payments_total ?? 0);
+        $paid = (float) ($voucher->supplier_payments_total ?? 0)
+            + (float) ($voucher->supplier_party_payments_total ?? 0);
         $freight = (float) $voucher->supplier_freight;
         $advance = (float) $voucher->advance_paid;
         return [
@@ -270,6 +297,7 @@ class VoucherController extends Controller
             'supplier_name' => $voucher->supplier?->name,
             'supplier_freight' => $freight,
             'advance_paid' => $advance,
+            'advance_mode' => $voucher->advance_mode,
             'supplier_paid' => $paid,
             'supplier_balance' => max(0, $freight - $advance - $paid),
             'hamali_loading' => (float) $voucher->hamali_loading,

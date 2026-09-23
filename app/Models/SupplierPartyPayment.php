@@ -14,6 +14,9 @@ class SupplierPartyPayment extends Model
         'payment_date',
         'amount',
         'payment_mode',
+        'bank_id',
+        'cheque_status',
+        'cheque_cleared_date',
         'reference',
         'remarks',
         'attachment_name',
@@ -27,6 +30,7 @@ class SupplierPartyPayment extends Model
     {
         return [
             'payment_date' => 'date',
+            'cheque_cleared_date' => 'date',
             'amount' => 'decimal:2',
             'attachment_size' => 'integer',
         ];
@@ -40,6 +44,20 @@ class SupplierPartyPayment extends Model
     public function voucher(): BelongsTo
     {
         return $this->belongsTo(Voucher::class);
+    }
+
+    public function bank(): BelongsTo
+    {
+        return $this->belongsTo(Bank::class);
+    }
+
+    public function scopePosted($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('payment_mode')
+                ->orWhereRaw('LOWER(payment_mode) <> ?', ['cheque'])
+                ->orWhere('cheque_status', 'cleared');
+        });
     }
 
     public function creator(): BelongsTo

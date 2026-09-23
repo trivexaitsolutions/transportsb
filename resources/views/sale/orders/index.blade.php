@@ -38,7 +38,7 @@
                 @php($remaining=max(0,(int)$item->trips_quantity-$used))
                 <tr tabindex="0" data-so-row>
                     <td>{{ ($items->currentPage()-1)*$items->perPage()+$loop->iteration }}</td>
-                    <td class="font-black">{{ $item->so_number }}</td>
+                    <td class="font-black"><a href="{{ route('sale.vouchers.index', ['sales_order_id' => $item->id]) }}" class="text-blue-700 hover:underline" title="Open this SO in Voucher Entry">{{ $item->so_number }}</a></td>
                     <td>{{ $item->so_date?->format('d-m-Y') }}</td>
                     <td class="font-bold">{{ $item->customer?->name }}</td>
                     <td>{{ $item->from_location }}</td><td>{{ $item->to_location }}</td>

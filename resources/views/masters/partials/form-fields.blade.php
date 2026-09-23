@@ -10,6 +10,13 @@
                 <span class="mb-1 block text-xs font-black uppercase tracking-wide text-slate-600">{{ $field['label'] }} @if(!empty($field['required']))<span class="text-red-600">*</span>@endif</span>
                 @if($field['type'] === 'textarea')
                     <textarea name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" data-default-value="{{ $field['default'] ?? '' }}" class="master-textarea quick-master-textarea" {{ !empty($field['required']) ? 'required' : '' }}>{{ $field['default'] ?? '' }}</textarea>
+                @elseif($field['type'] === 'select')
+                    <select name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input quick-master-input" {{ !empty($field['required']) ? 'required' : '' }}>
+                        <option value="">Select {{ $field['label'] }}</option>
+                        @foreach(($field['options'] ?? []) as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
                 @else
                     <input type="{{ $field['type'] }}" name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input quick-master-input" @if($field['type'] === 'number') step="0.01" @endif {{ !empty($field['required']) ? 'required' : '' }}>
                 @endif

@@ -13,7 +13,13 @@ class CustomerPartyPayment extends Model
         'invoice_batch_id',
         'payment_date',
         'amount',
+        'tds_percent',
+        'tds_amount',
+        'net_amount',
         'payment_mode',
+        'bank_id',
+        'cheque_status',
+        'cheque_cleared_date',
         'reference',
         'remarks',
         'attachment_name',
@@ -28,7 +34,11 @@ class CustomerPartyPayment extends Model
         return [
             'payment_date' => 'date',
             'payment_type' => 'string',
+            'cheque_cleared_date' => 'date',
             'amount' => 'decimal:2',
+            'tds_percent' => 'decimal:2',
+            'tds_amount' => 'decimal:2',
+            'net_amount' => 'decimal:2',
             'attachment_size' => 'integer',
         ];
     }
@@ -41,6 +51,20 @@ class CustomerPartyPayment extends Model
     public function invoiceBatch(): BelongsTo
     {
         return $this->belongsTo(InvoiceBatch::class);
+    }
+
+    public function bank(): BelongsTo
+    {
+        return $this->belongsTo(Bank::class);
+    }
+
+    public function scopePosted($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('payment_mode')
+                ->orWhereRaw('LOWER(payment_mode) <> ?', ['cheque'])
+                ->orWhere('cheque_status', 'cleared');
+        });
     }
 
     public function creator(): BelongsTo
