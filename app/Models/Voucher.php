@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Voucher extends Model
 {
     protected $fillable = [
-        'sr_no', 'lr_date', 'sales_order_id', 'transport_name_id', 'lr_no', 'vehicle_type_id',
+        'sr_no', 'lr_date', 'sales_order_id', 'company_id', 'lr_no', 'vehicle_type_id',
         'lorry_number', 'supplier_id', 'supplier_freight', 'advance_paid', 'advance_mode', 'hamali_loading',
         'hamali_unloading', 'other_charges', 'remarks', 'description', 'created_by',
     ];
@@ -27,7 +27,8 @@ class Voucher extends Model
     }
 
     public function salesOrder(): BelongsTo { return $this->belongsTo(SalesOrder::class); }
-    public function transportName(): BelongsTo { return $this->belongsTo(TransportName::class); }
+    public function company(): BelongsTo { return $this->belongsTo(Company::class); }
+
     public function vehicleType(): BelongsTo { return $this->belongsTo(VehicleType::class); }
     public function supplier(): BelongsTo { return $this->belongsTo(Supplier::class); }
     public function supplierPayments(): HasMany { return $this->hasMany(SupplierPayment::class); }

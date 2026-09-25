@@ -9,6 +9,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\BankTransactionController;
 use App\Http\Controllers\SoNumberSeriesController;
+use App\Http\Controllers\CashBookController;
+use App\Http\Controllers\CompanyController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => auth()->check() ? redirect()->route('sale.orders.index') : redirect()->route('login'));
@@ -21,6 +23,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::prefix('sale')->name('sale.')->group(function () {
         Route::get('/orders', [SalesOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/number-preview', [SalesOrderController::class, 'numberPreview'])->name('orders.number-preview');
         Route::get('/orders/options', [SalesOrderController::class, 'options'])->name('orders.options');
         Route::post('/orders', [SalesOrderController::class, 'store'])->name('orders.store');
         Route::put('/orders/{salesOrder}', [SalesOrderController::class, 'update'])->name('orders.update');
@@ -65,12 +68,24 @@ Route::middleware('auth')->group(function () {
         Route::delete('/bank/{transaction}', [BankTransactionController::class, 'destroy'])->name('bank.destroy');
     });
 
+    Route::prefix('cash')->name('cash.')->group(function () {
+        Route::get('/in-hand', [CashBookController::class, 'cashInHand'])->name('hand.index');
+        Route::get('/in-bank', [CashBookController::class, 'cashInBank'])->name('bank.index');
+    });
+
     Route::prefix('ledgers')->name('ledgers.')->group(function () {
         Route::get('/customers', [LedgerController::class, 'customerIndex'])->name('customers.index');
+        Route::get('/customers/print', [LedgerController::class, 'customerPrint'])->name('customers.print');
         Route::get('/suppliers', [LedgerController::class, 'supplierIndex'])->name('suppliers.index');
+        Route::get('/suppliers/print', [LedgerController::class, 'supplierPrint'])->name('suppliers.print');
     });
 
     Route::prefix('masters')->name('masters.')->group(function () {
+        Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
+        Route::post('/companies', [CompanyController::class, 'store'])->name('companies.store');
+        Route::put('/companies/{company}', [CompanyController::class, 'update'])->name('companies.update');
+        Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy');
+
         Route::get('/so-number-series', [SoNumberSeriesController::class, 'index'])->name('so-series.index');
         Route::post('/so-number-series', [SoNumberSeriesController::class, 'store'])->name('so-series.store');
         Route::put('/so-number-series/{series}', [SoNumberSeriesController::class, 'update'])->name('so-series.update');

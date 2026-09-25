@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Models\CustomerPartyPayment;
 use App\Models\CustomerPayment;
 use App\Models\InvoiceBatch;
+use App\Models\PrintSetting;
 use App\Models\Supplier;
 use App\Models\SupplierPartyPayment;
 use App\Models\SupplierPayment;
@@ -43,6 +44,7 @@ class LedgerController extends Controller
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'indexRoute' => route('ledgers.customers.index'),
+            'printRoute' => route('ledgers.customers.print'),
         ]));
     }
 
@@ -73,6 +75,41 @@ class LedgerController extends Controller
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'indexRoute' => route('ledgers.suppliers.index'),
+            'printRoute' => route('ledgers.suppliers.print'),
+        ]));
+    }
+
+    public function customerPrint(Request $request): View
+    {
+        [$fromDate, $toDate] = $this->dateRange($request);
+        $customer = Customer::query()->findOrFail($request->integer('customer_id'));
+        $ledger = $this->customerLedger($customer, $fromDate, $toDate);
+
+        return view('ledgers.print', array_merge($ledger, [
+            'ledgerType' => 'customer',
+            'title' => 'Customer Ledger',
+            'partyLabel' => 'Customer',
+            'party' => $customer,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'printSettings' => PrintSetting::current(),
+        ]));
+    }
+
+    public function supplierPrint(Request $request): View
+    {
+        [$fromDate, $toDate] = $this->dateRange($request);
+        $supplier = Supplier::query()->findOrFail($request->integer('supplier_id'));
+        $ledger = $this->supplierLedger($supplier, $fromDate, $toDate);
+
+        return view('ledgers.print', array_merge($ledger, [
+            'ledgerType' => 'supplier',
+            'title' => 'Supplier Ledger',
+            'partyLabel' => 'Supplier / Transporter',
+            'party' => $supplier,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'printSettings' => PrintSetting::current(),
         ]));
     }
 
@@ -320,6 +357,18 @@ class LedgerController extends Controller
             'creditTotal' => 0.0,
             'closingOutstanding' => 0.0,
         ];
+    }
+
+    private function dateRange(Request $request): array
+    {
+        $fromDate = $this->filterDate($request->string('from_date')->toString(), now()->startOfMonth()->toDateString());
+        $toDate = $this->filterDate($request->string('to_date')->toString(), now()->toDateString());
+
+        if ($fromDate > $toDate) {
+            [$fromDate, $toDate] = [$toDate, $fromDate];
+        }
+
+        return [$fromDate, $toDate];
     }
 
     private function filterDate(string $value, string $fallback): string

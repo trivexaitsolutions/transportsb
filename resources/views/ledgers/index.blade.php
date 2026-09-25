@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.ledger-page{min-height:calc(100vh - 56px);background:#f8fafc;padding:16px}.ledger-card{background:#fff;border:1px solid #cbd5e1}.ledger-head{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #cbd5e1;padding:12px 14px}.ledger-title{font-size:18px;font-weight:900}.ledger-sub{font-size:11px;font-weight:700;color:#64748b}.ledger-filter{display:grid;grid-template-columns:145px 145px minmax(260px,1fr) auto auto;gap:8px;align-items:end;padding:12px 14px;border-bottom:1px solid #cbd5e1;background:#f8fafc}.ledger-label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.ledger-input{height:36px;width:100%;border:1px solid #94a3b8;background:#fff;padding:0 9px;font-weight:800;outline:none}.ledger-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.ledger-btn{height:36px;border:1px solid #94a3b8;background:#fff;padding:0 14px;font-weight:900}.ledger-btn.primary{border-color:#08765b;background:#08765b;color:#fff}.ledger-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid #cbd5e1}.ledger-summary>div{border:1px solid #cbd5e1;background:#f8fafc;padding:10px}.ledger-summary small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b}.ledger-summary b{display:block;margin-top:2px;font-size:16px}.ledger-table-wrap{overflow:auto}.ledger-table{width:100%;min-width:980px;border-collapse:collapse;font-size:12px}.ledger-table th{background:#dfe7f1;border-right:1px solid #aebccd;border-bottom:1px solid #94a3b8;padding:7px 8px;font-size:10px;font-weight:900;text-transform:uppercase;text-align:left;white-space:nowrap}.ledger-table td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:8px;vertical-align:top}.ledger-table .money{text-align:right;font-weight:900;white-space:nowrap}.ledger-table .debit{color:#b91c1c}.ledger-table .credit{color:#047857}.ledger-table .balance{background:#f8fafc}.ledger-table .previous-row td{background:#fff7cc;font-weight:900;border-top:2px solid #c59b19}.ledger-table .empty-row td{padding:34px;text-align:center;color:#64748b;font-weight:700}.ledger-party-name{font-size:13px;font-weight:900}.ledger-note{font-size:10px;color:#64748b}.closing-due{color:#b91c1c}.closing-advance{color:#047857}@media(max-width:850px){.ledger-page{padding:8px}.ledger-filter{grid-template-columns:1fr 1fr}.ledger-filter .party-filter{grid-column:1/-1}.ledger-summary{grid-template-columns:1fr 1fr}}
+.ledger-page{min-height:calc(100vh - 56px);background:#f8fafc;padding:16px}.ledger-card{background:#fff;border:1px solid #cbd5e1}.ledger-head{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #cbd5e1;padding:12px 14px}.ledger-title{font-size:18px;font-weight:900}.ledger-sub{font-size:11px;font-weight:700;color:#64748b}.ledger-filter{display:grid;grid-template-columns:145px 145px minmax(260px,1fr) auto auto auto;gap:8px;align-items:end;padding:12px 14px;border-bottom:1px solid #cbd5e1;background:#f8fafc}.ledger-label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.ledger-input{height:36px;width:100%;border:1px solid #94a3b8;background:#fff;padding:0 9px;font-weight:800;outline:none}.ledger-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.ledger-btn{height:36px;border:1px solid #94a3b8;background:#fff;padding:0 14px;font-weight:900}.ledger-btn.primary{border-color:#08765b;background:#08765b;color:#fff}.ledger-btn.print{border-color:#0f766e;background:#fff;color:#0f766e}.ledger-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 14px;border-bottom:1px solid #cbd5e1}.ledger-summary>div{border:1px solid #cbd5e1;background:#f8fafc;padding:10px}.ledger-summary small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b}.ledger-summary b{display:block;margin-top:2px;font-size:16px}.ledger-table-wrap{overflow:auto}.ledger-table{width:100%;min-width:980px;border-collapse:collapse;font-size:12px}.ledger-table th{background:#dfe7f1;border-right:1px solid #aebccd;border-bottom:1px solid #94a3b8;padding:7px 8px;font-size:10px;font-weight:900;text-transform:uppercase;text-align:left;white-space:nowrap}.ledger-table td{border-right:1px solid #cbd5e1;border-bottom:1px solid #cbd5e1;padding:8px;vertical-align:top}.ledger-table .money{text-align:right;font-weight:900;white-space:nowrap}.ledger-table .debit{color:#b91c1c}.ledger-table .credit{color:#047857}.ledger-table .balance{background:#f8fafc}.ledger-table .total-row td{background:#eef6ff;font-weight:900;border-top:2px solid #64748b}.ledger-table .previous-row td{background:#fff7cc;font-weight:900;border-top:1px solid #c59b19}.ledger-table .empty-row td{padding:34px;text-align:center;color:#64748b;font-weight:700}.ledger-party-name{font-size:13px;font-weight:900}.ledger-note{font-size:10px;color:#64748b}.closing-due{color:#b91c1c}.closing-advance{color:#047857}@media(max-width:850px){.ledger-page{padding:8px}.ledger-filter{grid-template-columns:1fr 1fr}.ledger-filter .party-filter{grid-column:1/-1}.ledger-summary{grid-template-columns:1fr 1fr}}
 </style>
 @endpush
 
@@ -36,6 +36,14 @@
                 </button>
             </label>
             <button class="ledger-btn primary" id="showLedgerBtn" type="submit">Show Ledger</button>
+            @if($selectedParty)
+                <button
+                    type="button"
+                    id="ledgerPrintBtn"
+                    data-print-url="{{ $printRoute.'?'.http_build_query(['from_date'=>$fromDate,'to_date'=>$toDate,$partyField=>$selectedPartyId]) }}"
+                    class="ledger-btn print"
+                >Print</button>
+            @endif
             <a href="{{ $indexRoute }}" class="ledger-btn inline-flex items-center justify-center">Reset</a>
         </form>
 
@@ -82,6 +90,15 @@
                         @empty
                             <tr class="empty-row"><td colspan="7">No Debit/Credit entries found in this date range.</td></tr>
                         @endforelse
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="4">TOTAL</td>
+                            <td class="money debit">₹{{ number_format($debitTotal,2) }}</td>
+                            <td class="money credit">₹{{ number_format($creditTotal,2) }}</td>
+                            {{-- Outstanding total cell blank kar diya hai --}}
+                            <td class="money">-</td>
+                        </tr>
                         <tr class="previous-row">
                             <td>{{ \Carbon\Carbon::parse($fromDate)->subDay()->format('d-m-Y') }}</td>
                             <td colspan="3">Previous Outstanding</td>
@@ -89,7 +106,7 @@
                             <td class="money">-</td>
                             <td class="money">₹{{ number_format(abs($previousOutstanding),2) }} <span class="ledger-note">{{ $previousOutstanding >= 0 ? 'Due' : 'Advance' }}</span></td>
                         </tr>
-                    </tbody>
+                    </tfoot>
                 </table>
             </div>
         @else
@@ -97,8 +114,10 @@
         @endif
     </section>
 </div>
-@endsection
 
+{{-- Direct silent printing ke liye invisible iframe --}}
+<iframe id="directPrintFrame" style="position:fixed;right:100%;bottom:100%;width:0;height:0;border:0;"></iframe>
+@endsection
 
 @push('scripts')
 <script>
@@ -146,6 +165,32 @@ document.addEventListener('DOMContentLoaded', () => {
             event.preventDefault();
             openPartySelector(event.key);
         }
+    });
+
+    // 1-Click Print Handling
+    const printBtn = document.getElementById('ledgerPrintBtn');
+    const directPrintFrame = document.getElementById('directPrintFrame');
+
+    printBtn?.addEventListener('click', () => {
+        const url = printBtn.dataset.printUrl;
+        if (!url || !directPrintFrame) return;
+
+        const originalText = printBtn.textContent;
+        printBtn.textContent = 'Loading...';
+        printBtn.disabled = true;
+
+        directPrintFrame.onload = () => {
+            printBtn.textContent = originalText;
+            printBtn.disabled = false;
+            try {
+                directPrintFrame.contentWindow.focus();
+                directPrintFrame.contentWindow.print();
+            } catch (err) {
+                console.error('Print trigger failed:', err);
+            }
+        };
+
+        directPrintFrame.src = url;
     });
 });
 </script>

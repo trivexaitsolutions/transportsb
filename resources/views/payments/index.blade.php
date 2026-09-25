@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.payment-workspace{min-height:calc(100vh - 56px);background:#f8fafc;padding:16px}.payment-panel{border:1px solid #cbd5e1;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05)}.payment-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #cbd5e1;background:#f8fafc;padding:11px 14px}.payment-head h1{font-size:17px;font-weight:900}.payment-head p{font-size:11px;font-weight:600;color:#64748b}.payment-head-actions{display:flex;align-items:center;gap:8px}.add-payment-btn{height:34px;border:1px solid #047857;background:#08765b;color:#fff;padding:0 14px;font-size:11px;font-weight:900;white-space:nowrap}.add-payment-btn:focus{outline:none;box-shadow:0 0 0 2px #a7f3d0}.close-workspace-btn{height:34px;width:34px;border:1px solid #cbd5e1;background:#fff;font-weight:900}.history-head{display:flex;align-items:end;gap:9px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #cbd5e1;background:#f8fafc}.filter-field{min-width:140px}.filter-field.party-filter{min-width:250px}.filter-field label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.pay-input{width:100%;height:38px;border:1px solid #94a3b8;background:#fff;padding:0 9px;font-size:12px;font-weight:700;outline:none}.pay-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.filter-btn{height:36px;border:1px solid #94a3b8;background:#fff;padding:0 13px;font-size:11px;font-weight:900}.filter-btn.primary{border-color:#047857;background:#ecfdf5;color:#065f46}.history-summary{margin-left:auto;text-align:right;font-size:11px;font-weight:800;color:#475569}.history-summary b{display:block;font-size:16px;color:#0f172a}.payment-table-wrap{overflow:auto}.payment-table{width:100%;min-width:1280px;border-collapse:collapse;font-size:12px}.payment-table th{height:32px;border-right:1px solid #aebccd;border-bottom:1px solid #94a3b8;background:#dfe7f1;padding:5px 7px;text-align:left;font-size:10px;font-weight:900;text-transform:uppercase;white-space:nowrap}.payment-table td{height:36px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:6px 7px;font-weight:650;vertical-align:middle}.payment-table tr:hover td{background:#f8fafc}.money{text-align:right;font-weight:900!important;white-space:nowrap}.receipt-link{color:#1d4ed8;font-weight:900;text-decoration:underline}.delete-payment{border:0;background:transparent;color:#b91c1c;font-size:11px;font-weight:900}.empty-row{padding:24px!important;text-align:center;color:#94a3b8}.pagination-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;background:#f8fafc}.pagination-link{border:1px solid #94a3b8;background:#fff;padding:6px 11px;font-size:11px;font-weight:800}.pagination-link.disabled{opacity:.45;pointer-events:none}
+.payment-workspace{min-height:calc(100vh - 56px);background:#f8fafc;padding:16px}.payment-panel{border:1px solid #cbd5e1;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.05)}.payment-head{display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid #cbd5e1;background:#f8fafc;padding:11px 14px}.payment-head h1{font-size:17px;font-weight:900}.payment-head p{font-size:11px;font-weight:600;color:#64748b}.payment-head-actions{display:flex;align-items:center;gap:8px}.add-payment-btn{height:34px;border:1px solid #047857;background:#08765b;color:#fff;padding:0 14px;font-size:11px;font-weight:900;white-space:nowrap}.add-payment-btn:focus{outline:none;box-shadow:0 0 0 2px #a7f3d0}.close-workspace-btn{height:34px;width:34px;border:1px solid #cbd5e1;background:#fff;font-weight:900}.history-head{display:flex;align-items:end;gap:9px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid #cbd5e1;background:#f8fafc}.filter-field{min-width:140px}.filter-field.party-filter{min-width:250px}.filter-field label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.pay-input{width:100%;height:38px;border:1px solid #94a3b8;background:#fff;padding:0 9px;font-size:12px;font-weight:700;outline:none}.pay-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.filter-party-selector{position:relative;text-align:left;padding-right:30px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.filter-party-selector:after{content:'⌄';position:absolute;right:10px;top:50%;transform:translateY(-53%);color:#475569;font-size:14px}.filter-party-selector.empty{color:#475569;font-weight:700}.filter-btn{height:36px;border:1px solid #94a3b8;background:#fff;padding:0 13px;font-size:11px;font-weight:900}.filter-btn.primary{border-color:#047857;background:#ecfdf5;color:#065f46}.history-summary{margin-left:auto;text-align:right;font-size:11px;font-weight:800;color:#475569}.history-summary b{display:block;font-size:16px;color:#0f172a}.payment-table-wrap{overflow:auto}.payment-table{width:100%;min-width:1280px;border-collapse:collapse;font-size:12px}.payment-table th{height:32px;border-right:1px solid #aebccd;border-bottom:1px solid #94a3b8;background:#dfe7f1;padding:5px 7px;text-align:left;font-size:10px;font-weight:900;text-transform:uppercase;white-space:nowrap}.payment-table td{height:36px;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;padding:6px 7px;font-weight:650;vertical-align:middle}.payment-table tr:hover td{background:#f8fafc}.money{text-align:right;font-weight:900!important;white-space:nowrap}.receipt-link{color:#1d4ed8;font-weight:900;text-decoration:underline}.delete-payment{border:0;background:transparent;color:#b91c1c;font-size:11px;font-weight:900}.empty-row{padding:24px!important;text-align:center;color:#94a3b8}.pagination-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;background:#f8fafc}.pagination-link{border:1px solid #94a3b8;background:#fff;padding:6px 11px;font-size:11px;font-weight:800}.pagination-link.disabled{opacity:.45;pointer-events:none}
 
 .payment-modal-backdrop{position:fixed;inset:0;z-index:240;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:16px}.payment-modal-backdrop.hidden{display:none!important}.payment-modal{width:min(760px,96vw);max-height:94vh;overflow:auto;background:#fff;border:1px solid #64748b;box-shadow:0 24px 70px rgba(15,23,42,.35)}.payment-modal-head{display:flex;align-items:center;justify-content:space-between;background:#055b46;color:#fff;padding:11px 15px}.payment-modal-head h2{font-size:15px;font-weight:900}.payment-modal-close{height:28px;width:28px;border:0;background:transparent;color:#fff;font-size:21px;font-weight:900;line-height:1}.payment-modal-body{padding:14px}.payment-entry-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:10px}.pay-field.full{grid-column:1/-1}.pay-field label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.pay-field-label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}.pay-field-label label{margin-bottom:0}.party-outstanding{display:inline-flex;align-items:center;gap:4px;border:1px solid #f59e0b;background:#fffbeb;color:#92400e;padding:3px 7px;font-size:10px;font-weight:900;white-space:nowrap}.party-outstanding.empty{border-color:#cbd5e1;background:#f8fafc;color:#64748b}.party-outstanding b{font-size:11px}.pay-file{padding:7px 6px;font-size:11px}.payment-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid #e2e8f0}.modal-btn{height:36px;border:1px solid #94a3b8;background:#fff;padding:0 15px;font-size:11px;font-weight:900}.modal-btn.primary{border-color:#047857;background:#08765b;color:#fff}.payment-help{margin-top:9px;font-size:10px;font-weight:700;color:#64748b}.party-selector-btn{width:100%;height:38px;border:1px solid #94a3b8;background:#fff;padding:0 34px 0 9px;font-size:12px;font-weight:800;text-align:left;outline:none;position:relative}.party-selector-btn:after{content:'⌄';position:absolute;right:10px;top:50%;transform:translateY(-53%);color:#475569;font-size:14px}.party-selector-btn.empty{color:#64748b;font-weight:700}.party-selector-btn:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5;background:#ecfdf5}.bill-field.hidden{display:none}.bill-summary{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border:1px solid #cbd5e1;background:#f8fafc;padding:9px}.bill-summary.hidden{display:none}.bill-summary small{display:block;font-size:9px;font-weight:900;text-transform:uppercase;color:#64748b}.bill-summary b{font-size:13px;color:#0f172a}.validation-box{margin-bottom:12px;border:1px solid #fecaca;background:#fef2f2;padding:9px 11px;color:#991b1b;font-size:11px;font-weight:700}.conditional-field.hidden{display:none}.cheque-status-select{height:30px;border:1px solid #94a3b8;background:#fff;padding:0 6px;font-size:11px;font-weight:800}.status-deposited{color:#92400e}.status-cleared{color:#047857}.posted-note{display:block;margin-top:2px;font-size:9px;font-weight:800;color:#64748b}
 
@@ -36,14 +36,22 @@
                     <label for="toDate">To Date</label>
                     <input id="toDate" name="to_date" type="date" value="{{ $toDate }}" class="pay-input">
                 </div>
+                @php($selectedFilterParty = $parties->firstWhere('id', $selectedPartyId))
                 <div class="filter-field party-filter">
-                    <label for="filterParty">{{ $partyLabel }}</label>
-                    <select id="filterParty" name="{{ $partyField }}" class="pay-input" data-slim-select data-placeholder="All {{ $partyLabel }}">
-                        <option value="">All {{ $partyLabel }}</option>
-                        @foreach($parties as $party)
-                            <option value="{{ $party->id }}" @selected((string) $selectedPartyId === (string) $party->id)>{{ $party->name }}{{ $party->code ? ' ('.$party->code.')' : '' }} — Outstanding ₹{{ number_format((float)($party->outstanding_amount ?? 0), 2) }}</option>
-                        @endforeach
-                    </select>
+                    <label for="filterPartyButton">{{ $partyLabel }}</label>
+                    <input id="filterParty" type="hidden" name="{{ $partyField }}" value="{{ $selectedPartyId ?: '' }}">
+                    <button
+                        type="button"
+                        id="filterPartyButton"
+                        class="pay-input filter-party-selector {{ $selectedFilterParty ? '' : 'empty' }}"
+                    >
+                        <span id="filterPartyText">
+                            {{ $selectedFilterParty
+                                ? $selectedFilterParty->name.($selectedFilterParty->code ? ' ('.$selectedFilterParty->code.')' : '')
+                                : 'All '.$partyLabel
+                            }}
+                        </span>
+                    </button>
                 </div>
                 <div class="filter-field">
                     <label for="filterMode">Payment Mode</label>
@@ -116,7 +124,7 @@
                             <td class="money">₹{{ number_format((float) $payment->amount, 2) }}</td>
                             @if($paymentType === 'customer')
                             <td class="money">
-                                @if(($payment->payment_type ?? 'on_account') === 'on_account' && (float)($payment->tds_percent ?? 0) > 0)
+                                @if((float)($payment->tds_percent ?? 0) > 0)
                                     {{ rtrim(rtrim(number_format((float)$payment->tds_percent, 2, '.', ''), '0'), '.') }}%<br>
                                     <span class="text-[10px] text-slate-500">₹{{ number_format((float)($payment->tds_amount ?? 0), 2) }}</span>
                                 @else
@@ -126,7 +134,7 @@
                             <td class="money">₹{{ number_format((float)($payment->net_amount ?? $payment->amount), 2) }}</td>
                             @endif
                             <td>{{ $payment->payment_mode ?: '-' }}</td>
-                            <td>{{ $payment->bank?->name ?: '-' }}</td>
+                            <td>{{ $payment->bank ? (($payment->bank->company?->name ? $payment->bank->company->name.' · ' : '').$payment->bank->name) : '-' }}</td>
                             <td>
                                 @if(strtolower((string)$payment->payment_mode) === 'cheque')
                                     <form method="POST" action="{{ route($chequeStatusRouteName, $payment) }}" class="inline" data-cheque-status-form>
@@ -259,7 +267,7 @@
                         <select id="paymentBank" name="bank_id" class="pay-input">
                             <option value="">Select Bank</option>
                             @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}" @selected((string)old('bank_id', $defaultBankId) === (string)$bank->id)>{{ $bank->transportName?->name ? $bank->transportName->name.' · ' : '' }}{{ $bank->name }}</option>
+                                <option value="{{ $bank->id }}" @selected((string)old('bank_id', $defaultBankId) === (string)$bank->id)>{{ $bank->company?->name ? $bank->company->name.' · ' : '' }}{{ $bank->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -284,7 +292,7 @@
                     </div>
                 </div>
 
-                <div class="payment-help">Enter: {{ $paymentType === 'customer' ? 'Customer' : 'Supplier' }} → Payment Against → Bill/LR (when required) → Date → Amount{{ $paymentType === 'customer' ? ' → TDS (On Account)' : '' }} → Mode → Bank/Cheque Status (when required) → Reference → Attachment → Remarks → Save · Esc Close · Ctrl+S Save · Receipt supports PDF/JPG/PNG/WEBP up to 10 MB.</div>
+                <div class="payment-help">Enter: {{ $paymentType === 'customer' ? 'Customer' : 'Supplier' }} → Payment Against → Bill/LR (when required) → Date → Amount{{ $paymentType === 'customer' ? ' → TDS' : '' }} → Mode → Bank/Cheque Status (when required) → Reference → Attachment → Remarks → Save · Esc Close · Ctrl+S Save · Receipt supports PDF/JPG/PNG/WEBP up to 10 MB.</div>
 
                 <div class="payment-modal-actions">
                     <button type="button" id="cancelPaymentModal" class="modal-btn">Cancel</button>
@@ -301,6 +309,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('paymentModalBackdrop');
     const openBtn = document.getElementById('openPaymentModal');
+    const filterPartyInput = document.getElementById('filterParty');
+    const filterPartyButton = document.getElementById('filterPartyButton');
+    const filterPartyText = document.getElementById('filterPartyText');
+    const filterMode = document.getElementById('filterMode');
+    const filterPartyType = @json($paymentType === 'customer' ? 'customers' : 'suppliers');
+    const filterPartyTitle = @json('Select '.$partyLabel);
+    const filterPartyPlaceholder = @json('All '.$partyLabel);
     const closeBtn = document.getElementById('closePaymentModal');
     const cancelBtn = document.getElementById('cancelPaymentModal');
     const form = document.getElementById('paymentEntryForm');
@@ -339,6 +354,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const oldAllocationId = isCustomerPayment ? @json((string) old('invoice_batch_id', '')) : @json((string) old('voucher_id', ''));
     let modalOpener = null;
 
+    const setFilterParty = (id, label = '') => {
+        if (!filterPartyInput || !filterPartyButton || !filterPartyText) return;
+        filterPartyInput.value = id || '';
+        filterPartyText.textContent = id ? (label || filterPartyTitle) : filterPartyPlaceholder;
+        filterPartyButton.classList.toggle('empty', !id);
+    };
+
+    const openFilterPartySelector = (search = '') => {
+        if (!filterPartyButton || !window.MasterSelector) return;
+        window.MasterSelector.open({
+            type: filterPartyType,
+            title: filterPartyTitle,
+            search,
+            opener: filterPartyButton,
+            allowAdd: false,
+            onSelect: item => {
+                setFilterParty(item.id, item.label || item.name);
+                setTimeout(() => filterMode?.focus(), 20);
+            },
+        });
+    };
+
     const focusParty = () => partyBtn?.focus();
     const money = value => '₹' + Number(value || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
     const partyKey = isCustomerPayment ? 'customer_id' : 'supplier_id';
@@ -357,14 +394,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const refreshTds = () => {
         if (!isCustomerPayment || !tdsFieldWrap || !netReceiptWrap) return;
-        const onAccount = paymentAgainst?.value === 'on_account';
-        tdsFieldWrap.classList.toggle('hidden', !onAccount);
-        netReceiptWrap.classList.toggle('hidden', !onAccount);
-        if (!onAccount && tdsPercent) tdsPercent.value = '0';
+
+        // TDS applies to both On Account and Against Bill receipts.
+        tdsFieldWrap.classList.remove('hidden');
+        netReceiptWrap.classList.remove('hidden');
+
         const gross = Math.max(0, Number(amount?.value || 0));
-        const pct = onAccount ? Math.min(100, Math.max(0, Number(tdsPercent?.value || 0))) : 0;
+        const pct = Math.min(100, Math.max(0, Number(tdsPercent?.value || 0)));
         const tds = Math.round((gross * pct / 100) * 100) / 100;
         const net = Math.max(0, Math.round((gross - tds) * 100) / 100);
+
         if (tdsAmountText) tdsAmountText.textContent = money(tds);
         if (netReceiptAmount) netReceiptAmount.value = money(net);
     };
@@ -495,6 +534,33 @@ document.addEventListener('DOMContentLoaded', () => {
     tdsPercent?.addEventListener('input', refreshTds);
     tdsPercent?.addEventListener('change', refreshTds);
     mode?.addEventListener('change',()=>{refreshModeFields();setTimeout(()=>{const key=modeKey();if(bankModes.includes(key)||key==='cheque')bank?.focus();else reference?.focus();},0);});
+
+    filterPartyButton?.addEventListener('click', () => openFilterPartySelector());
+    filterPartyButton?.addEventListener('keydown', event => {
+        if (event.key === 'Backspace' || event.key === 'Delete') {
+            event.preventDefault();
+            setFilterParty('', '');
+            return;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (filterPartyInput?.value) filterMode?.focus();
+            else openFilterPartySelector();
+            return;
+        }
+
+        if (event.key === ' ' && !filterPartyInput?.value) {
+            event.preventDefault();
+            openFilterPartySelector();
+            return;
+        }
+
+        if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+            event.preventDefault();
+            openFilterPartySelector(event.key);
+        }
+    });
 
     openBtn?.addEventListener('click', () => openModal(openBtn));
     closeBtn?.addEventListener('click', closeModal);

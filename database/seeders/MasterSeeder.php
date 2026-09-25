@@ -6,7 +6,7 @@ use App\Models\Customer;
 use App\Models\GstRate;
 use App\Models\PrintSetting;
 use App\Models\Supplier;
-use App\Models\TransportName;
+use App\Models\Company;
 use App\Models\VehicleType;
 use Illuminate\Database\Seeder;
 
@@ -64,7 +64,10 @@ class MasterSeeder extends Seeder
         }
 
         foreach (['BGT','LST'] as $name) {
-            TransportName::query()->updateOrCreate(['name'=>$name], ['is_active'=>true]);
+            Company::query()->firstOrCreate(
+                ['name' => $name],
+                ['gst_no' => '', 'address' => '']
+            );
         }
 
         foreach ([0,5,18,28] as $rate) {

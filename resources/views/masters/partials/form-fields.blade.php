@@ -18,7 +18,7 @@
                         @endforeach
                     </select>
                 @else
-                    <input type="{{ $field['type'] }}" name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input quick-master-input" @if($field['type'] === 'number') step="0.01" @endif {{ !empty($field['required']) ? 'required' : '' }}>
+                    <input type="{{ $field['type'] }}" name="{{ $field['name'] }}" data-master-field="{{ $field['name'] }}" class="master-input quick-master-input {{ !empty($field['readonly']) ? 'bg-slate-100 font-bold text-slate-600' : '' }}" @if($field['type'] === 'number') step="0.01" @endif {{ !empty($field['required']) ? 'required' : '' }} {{ !empty($field['readonly']) ? 'readonly' : '' }}>
                 @endif
             </label>
         @endif

@@ -12,7 +12,7 @@
     const quickFields = document.getElementById('quickMasterFields');
     const quickSave = document.getElementById('quickMasterSave');
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    const addLabels = {'customers': 'Customer', 'suppliers': 'Supplier / Transporter', 'vehicle-types': 'Vehicle Type', 'transport-names': 'Transport Name', 'gst-rates': 'GST Rate'};
+    const addLabels = {'customers': 'Customer', 'suppliers': 'Supplier / Transporter', 'vehicle-types': 'Vehicle Type', 'gst-rates': 'GST Rate'};
     let state = {type: null, url: null, onSelect: null, opener: null, items: [], active: 0, timer: null, title: 'Select', allowAdd: true, quickOnly: false, requestId: 0};
 
     async function responseData(response, fallback) {

@@ -50,7 +50,7 @@
                     <td>@if(!$item->is_active)<span class="so-inactive">Inactive</span>@elseif($remaining<=0)<span class="so-complete">Completed</span>@else<span class="so-open">Open</span><div class="text-[11px] text-slate-500">{{ $used }}/{{ $item->trips_quantity }} trips</div>@endif</td>
                     <td class="whitespace-nowrap">
                         <button type="button" class="edit-so font-bold text-blue-700 hover:underline" data-id="{{ $item->id }}" data-record="{{ json_encode([
-                            'so_number'=>$item->so_number,'so_date'=>$item->so_date?->format('Y-m-d'),'customer_id'=>$item->customer_id,'customer_name'=>$item->customer?->name,'customer_gst_no'=>$item->customer?->gst_no,'from_location'=>$item->from_location,'to_location'=>$item->to_location,'description'=>$item->description,'trips_quantity'=>(int)$item->trips_quantity,'per_trip_cost'=>(float)$item->per_trip_cost,'value'=>(float)$item->value,'tax_mode'=>$item->tax_mode ?? 'rcm','gst_rate'=>(float)$item->gst_rate,'gst_amount'=>(float)$item->gst_amount,'other_charges'=>(float)$item->other_charges,'total_amount'=>(float)$item->total_amount,'is_active'=>(bool)$item->is_active,'used_trips'=>$used
+                            'so_number'=>$item->so_number,'so_date'=>$item->so_date?->format('Y-m-d'),'customer_id'=>$item->customer_id,'customer_name'=>$item->customer?->name,'customer_gst_no'=>$item->customer?->gst_no,'customer_business_type'=>$item->customer?->business_type,'from_location'=>$item->from_location,'to_location'=>$item->to_location,'description'=>$item->description,'trips_quantity'=>(int)$item->trips_quantity,'per_trip_cost'=>(float)$item->per_trip_cost,'value'=>(float)$item->value,'tax_mode'=>$item->tax_mode ?? 'rcm','gst_rate'=>(float)$item->gst_rate,'gst_amount'=>(float)$item->gst_amount,'other_charges'=>(float)$item->other_charges,'total_amount'=>(float)$item->total_amount,'is_active'=>(bool)$item->is_active,'used_trips'=>$used
                         ]) }}">Edit</button>
                         <form method="POST" action="{{ route('sale.orders.destroy',$item) }}" class="ml-3 inline" onsubmit="return confirm('Delete this SO?')">@csrf @method('DELETE')<button class="font-bold text-red-700 hover:underline">Delete</button></form>
                     </td>
@@ -70,9 +70,9 @@
         <form id="soForm" method="POST" action="{{ route('sale.orders.store') }}" class="p-5">@csrf
             <div id="soMethodSlot"></div>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">SO Number <span class="text-red-600">*</span></span><input class="so-input uppercase" style="text-transform:uppercase" name="so_number" data-so-field="so_number" required></label>
+                <label class="md:col-span-2"><span class="mb-1 block text-xs font-black uppercase text-slate-600">Customer <span class="text-red-600">*</span></span><input type="hidden" name="customer_id" data-so-field="customer_id"><span class="flex"><button type="button" id="soCustomerBtn" class="so-selector empty flex-1" data-selector-field="customer_id">Select Customer</button><button type="button" id="addSoCustomerBtn" class="so-inline-add px-3 text-xs" title="Add Customer" aria-label="Add Customer">+ Add Customer</button></span></label>
+                <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">SO Number <span class="text-red-600">*</span></span><input class="so-input so-readonly uppercase" style="text-transform:uppercase" name="so_number" data-so-field="so_number" placeholder="Select customer first" readonly required><span id="soNumberHint" class="mt-1 block text-[11px] font-semibold text-slate-500">Select a customer to determine the SO number series.</span></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">SO Date <span class="text-red-600">*</span></span><input type="date" class="so-input" name="so_date" data-so-field="so_date" required></label>
-                 <label class="md:col-span-2"><span class="mb-1 block text-xs font-black uppercase text-slate-600">Customer <span class="text-red-600">*</span></span><input type="hidden" name="customer_id" data-so-field="customer_id"><span class="flex"><button type="button" id="soCustomerBtn" class="so-selector empty flex-1" data-selector-field="customer_id">Select Customer</button><button type="button" id="addSoCustomerBtn" class="so-inline-add px-3 text-xs" title="Add Customer" aria-label="Add Customer">+ Add Customer</button></span></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">From <span class="text-red-600">*</span></span><input class="so-input" name="from_location" data-so-field="from_location" required></label>
                 <label><span class="mb-1 block text-xs font-black uppercase text-slate-600">To <span class="text-red-600">*</span></span><input class="so-input" name="to_location" data-so-field="to_location" required></label>
                 <label class="md:col-span-2"><span class="mb-1 block text-xs font-black uppercase text-slate-600">Description / Service <span class="text-red-600">*</span></span><textarea class="so-textarea" name="description" data-so-field="description" required></textarea></label>
@@ -98,14 +98,15 @@
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
     const modal=document.getElementById('soModal'), form=document.getElementById('soForm'), addBtn=document.getElementById('addSoBtn'), title=document.getElementById('soModalTitle'), methodSlot=document.getElementById('soMethodSlot');
-    const storeUrl=@json(route('sale.orders.store')), baseUrl=@json(url('/sale/orders'));
-    let opener=null;
+    const storeUrl=@json(route('sale.orders.store')), baseUrl=@json(url('/sale/orders')), numberPreviewUrl=@json(route('sale.orders.number-preview'));
+    let opener=null, isEditing=false, previewRequest=0;
     const field=(name)=>form.querySelector(`[data-so-field="${name}"]`);
-    const customerBtn=document.getElementById('soCustomerBtn');
-    const ordered=()=>Array.from(form.querySelectorAll('[data-so-field], [data-selector-field]')).filter(el=>!el.disabled && el.type!=='hidden' && el.offsetParent!==null);
+    const customerBtn=document.getElementById('soCustomerBtn'), soNumberHint=document.getElementById('soNumberHint');
+    const ordered=()=>Array.from(form.querySelectorAll('[data-so-field], [data-selector-field]')).filter(el=>!el.disabled && !el.readOnly && el.type!=='hidden' && el.offsetParent!==null);
     const num=v=>Number.isFinite(parseFloat(v))?parseFloat(v):0;
     const localToday=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);};
     const fmt=v=>num(v).toFixed(2);
+
     function calc(){
         const value=num(field('trips_quantity').value)*num(field('per_trip_cost').value);
         const rawMode=field('tax_mode').value;
@@ -118,7 +119,6 @@ document.addEventListener('DOMContentLoaded',()=>{
             gstRate=[5,12,18].includes(num(field('gst_rate').value))?num(field('gst_rate').value):5;
             field('gst_rate').value=String(gstRate);
         }else{
-            // RCM and NA: no normal GST is added.
             gstRate=0;
             field('gst_rate').value='0';
         }
@@ -129,28 +129,185 @@ document.addEventListener('DOMContentLoaded',()=>{
         form.querySelector('[data-so-calc=total_amount]').value=fmt(total);
     }
     ['trips_quantity','per_trip_cost','tax_mode','gst_rate','other_charges'].forEach(n=>{field(n).addEventListener('input',calc);field(n).addEventListener('change',calc);});
-    field('so_number').addEventListener('input',()=>{const p=field('so_number').selectionStart;field('so_number').value=field('so_number').value.toUpperCase();try{field('so_number').setSelectionRange(p,p);}catch(e){}});
+
+    field('so_number').addEventListener('input',()=>{
+        if(field('so_number').readOnly)return;
+        const p=field('so_number').selectionStart;
+        field('so_number').value=field('so_number').value.toUpperCase();
+        try{field('so_number').setSelectionRange(p,p);}catch(e){}
+    });
+
     function setSelector(button,hidden,id,label){hidden.value=id||'';button.textContent=label||'Select';button.classList.toggle('empty',!id);}
     function applyCustomerTaxDefault(item){field('tax_mode').value=String(item.gst_no||'').trim()?field('tax_mode').value:'rcm';calc();}
-    function openCustomer(btn=customerBtn){MasterSelector.open({type:'customers',title:'Select Customer',opener:btn,onSelect:(item,meta)=>{setSelector(customerBtn,field('customer_id'),item.id,item.label||item.name);applyCustomerTaxDefault(item);setTimeout(()=>meta?.source==='quick-add'?customerBtn.focus():field('from_location').focus(),20);}});}
-    customerBtn.addEventListener('click',()=>openCustomer(customerBtn)); document.getElementById('addSoCustomerBtn').addEventListener('click',e=>MasterSelector.open({type:'customers',title:'Add Customer',opener:e.currentTarget,allowAdd:true,forceAdd:true,onSelect:item=>{setSelector(customerBtn,field('customer_id'),item.id,item.label||item.name);applyCustomerTaxDefault(item);setTimeout(()=>customerBtn.focus(),20);}}));
-    function reset(){form.reset();methodSlot.innerHTML='';form.action=storeUrl;field('so_date').value=localToday();field('tax_mode').value='hiring';field('gst_rate').value='18';field('is_active').checked=true;setSelector(customerBtn,field('customer_id'),null,'Select Customer');field('other_charges').value='';calc();}
-    function openCreate(origin=addBtn){opener=origin||document.activeElement;reset();title.textContent='Add SO';modal.classList.remove('hidden');setTimeout(()=>field('so_number').focus(),20);}
-    function openEdit(btn){opener=btn;let r={};try{r=JSON.parse(btn.dataset.record||'{}');}catch(error){window.AppToast?.('Unable to open this Sales Order. Please refresh and try again.','error');return;}reset();form.action=baseUrl+'/'+btn.dataset.id;methodSlot.innerHTML='<input type="hidden" name="_method" value="PUT">';title.textContent='Edit SO';['so_number','so_date','from_location','to_location','description','trips_quantity','per_trip_cost','other_charges'].forEach(n=>field(n).value=r[n]??'');field('tax_mode').value=['rcm','hiring','gst','na'].includes(r.tax_mode)?r.tax_mode:'rcm';field('gst_rate').value=String(r.gst_rate??0);field('is_active').checked=!!r.is_active;setSelector(customerBtn,field('customer_id'),r.customer_id,r.customer_name||'Select Customer');calc();modal.classList.remove('hidden');setTimeout(()=>field('so_number').focus(),20);}
+
+    function setSoNumberState(mode,number='',message=''){
+        const input=field('so_number');
+        if(isEditing){
+            input.readOnly=true;
+            input.classList.add('so-readonly');
+            input.placeholder='Existing SO Number';
+            soNumberHint.textContent='Existing SO Number is locked on edit.';
+            soNumberHint.className='mt-1 block text-[11px] font-semibold text-slate-500';
+            return;
+        }
+
+        if(mode==='manual'){
+            input.readOnly=false;
+            input.classList.remove('so-readonly');
+            input.value='';
+            input.placeholder='Enter customer-provided SO Number';
+            soNumberHint.textContent=message||'Government customer: SO Number is entered manually.';
+            soNumberHint.className='mt-1 block text-[11px] font-semibold text-amber-700';
+        }else if(mode==='auto'){
+            input.readOnly=true;
+            input.classList.add('so-readonly');
+            input.value=number||'';
+            input.placeholder='Auto-generated';
+            soNumberHint.textContent=message||'SO Number will be generated from the configured series when saved.';
+            soNumberHint.className='mt-1 block text-[11px] font-semibold text-emerald-700';
+        }else if(mode==='unavailable'){
+            input.readOnly=true;
+            input.classList.add('so-readonly');
+            input.value='';
+            input.placeholder='Series not configured';
+            soNumberHint.textContent=message||'SO Number Series is not configured.';
+            soNumberHint.className='mt-1 block text-[11px] font-semibold text-red-700';
+        }else{
+            input.readOnly=true;
+            input.classList.add('so-readonly');
+            input.value='';
+            input.placeholder='Select customer first';
+            soNumberHint.textContent='Select a customer to determine the SO number series.';
+            soNumberHint.className='mt-1 block text-[11px] font-semibold text-slate-500';
+        }
+    }
+
+    async function loadSoNumberForCustomer(item,{focus=true}={}){
+        if(isEditing)return;
+        const id=Number(item?.id||field('customer_id').value||0);
+        if(!id){setSoNumberState('none');return;}
+
+        const requestId=++previewRequest;
+        setSoNumberState('auto','','Checking SO Number Series...');
+        try{
+            const response=await fetch(numberPreviewUrl+'?customer_id='+encodeURIComponent(id),{headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'}});
+            const data=await response.json().catch(()=>({}));
+            if(requestId!==previewRequest)return;
+            if(!response.ok){
+                setSoNumberState('unavailable','',data.message||'SO Number Series is not configured.');
+                window.AppToast?.(data.message||'SO Number Series is not configured.','error');
+                return;
+            }
+            if(data.mode==='manual'){
+                setSoNumberState('manual','',data.message);
+                if(focus)setTimeout(()=>field('so_number').focus(),20);
+            }else{
+                const label=data.series_label?data.series_label+' Series: ':'';
+                setSoNumberState('auto',data.number||'',label+(data.message||''));
+                if(focus)setTimeout(()=>field('so_date').focus(),20);
+            }
+        }catch(error){
+            if(requestId!==previewRequest)return;
+            setSoNumberState('unavailable','','Unable to load SO Number Series. Please try again.');
+            window.AppToast?.('Unable to load SO Number Series. Please try again.','error');
+        }
+    }
+
+    function afterCustomerSelected(item,meta){
+        setSelector(customerBtn,field('customer_id'),item.id,item.label||item.name);
+        applyCustomerTaxDefault(item);
+        loadSoNumberForCustomer(item,{focus:meta?.source!=='quick-add'});
+        if(meta?.source==='quick-add')setTimeout(()=>customerBtn.focus(),20);
+    }
+
+    function openCustomer(btn=customerBtn){
+        MasterSelector.open({type:'customers',title:'Select Customer',opener:btn,onSelect:(item,meta)=>afterCustomerSelected(item,meta)});
+    }
+    customerBtn.addEventListener('click',()=>openCustomer(customerBtn));
+    document.getElementById('addSoCustomerBtn').addEventListener('click',e=>MasterSelector.open({type:'customers',title:'Add Customer',opener:e.currentTarget,allowAdd:true,forceAdd:true,onSelect:(item,meta)=>afterCustomerSelected(item,{...(meta||{}),source:'quick-add'})}));
+
+    function reset(){
+        isEditing=false;
+        previewRequest++;
+        form.reset();
+        methodSlot.innerHTML='';
+        form.action=storeUrl;
+        field('so_date').value=localToday();
+        field('tax_mode').value='hiring';
+        field('gst_rate').value='18';
+        field('is_active').checked=true;
+        setSelector(customerBtn,field('customer_id'),null,'Select Customer');
+        field('other_charges').value='';
+        setSoNumberState('none');
+        calc();
+    }
+
+    function openCreate(origin=addBtn){
+        opener=origin||document.activeElement;
+        reset();
+        title.textContent='Add SO';
+        modal.classList.remove('hidden');
+        setTimeout(()=>customerBtn.focus(),20);
+    }
+
+    function openEdit(btn){
+        opener=btn;
+        let r={};
+        try{r=JSON.parse(btn.dataset.record||'{}');}catch(error){window.AppToast?.('Unable to open this Sales Order. Please refresh and try again.','error');return;}
+        reset();
+        isEditing=true;
+        form.action=baseUrl+'/'+btn.dataset.id;
+        methodSlot.innerHTML='<input type="hidden" name="_method" value="PUT">';
+        title.textContent='Edit SO';
+        ['so_number','so_date','from_location','to_location','description','trips_quantity','per_trip_cost','other_charges'].forEach(n=>field(n).value=r[n]??'');
+        field('tax_mode').value=['rcm','hiring','gst','na'].includes(r.tax_mode)?r.tax_mode:'rcm';
+        field('gst_rate').value=String(r.gst_rate??0);
+        field('is_active').checked=!!r.is_active;
+        setSelector(customerBtn,field('customer_id'),r.customer_id,r.customer_name||'Select Customer');
+        setSoNumberState('edit',r.so_number||'');
+        calc();
+        modal.classList.remove('hidden');
+        setTimeout(()=>field('so_date').focus(),20);
+    }
+
     function close(){modal.classList.add('hidden');const back=opener;opener=null;setTimeout(()=>back?.focus?.(),0);}
-    addBtn.addEventListener('click',()=>openCreate(addBtn));document.querySelectorAll('.edit-so').forEach(b=>b.addEventListener('click',()=>openEdit(b)));document.getElementById('soClose').addEventListener('click',close);document.getElementById('soCancel').addEventListener('click',close);modal.addEventListener('mousedown',e=>{if(e.target===modal)close();});
+    addBtn.addEventListener('click',()=>openCreate(addBtn));
+    document.querySelectorAll('.edit-so').forEach(b=>b.addEventListener('click',()=>openEdit(b)));
+    document.getElementById('soClose').addEventListener('click',close);
+    document.getElementById('soCancel').addEventListener('click',close);
+    modal.addEventListener('mousedown',e=>{if(e.target===modal)close();});
+
     form.addEventListener('keydown',e=>{
         if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close();return;}
         if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();e.stopPropagation();form.requestSubmit();return;}
         const target=e.target;
-        if(e.key==='Backspace'&&target===customerBtn){e.preventDefault();setSelector(customerBtn,field('customer_id'),null,'Select Customer');return;}
+        if(e.key==='Backspace'&&target===customerBtn){
+            e.preventDefault();
+            setSelector(customerBtn,field('customer_id'),null,'Select Customer');
+            if(!isEditing)setSoNumberState('none');
+            return;
+        }
         if(e.key==='Backspace'&&target instanceof HTMLInputElement&&target.type==='date'){e.preventDefault();target.value='';return;}
         if(e.key!=='Enter'||target.tagName==='TEXTAREA')return;
-        const list=ordered(),i=list.indexOf(target);if(i<0)return;e.preventDefault();if(target===customerBtn){if(field('customer_id').value){field('from_location').focus();}else openCustomer(target);return;}if(target instanceof HTMLInputElement&&target.type==='date'&&!target.value){target.showPicker?.();return;}if(i<list.length-1)list[i+1].focus();else form.requestSubmit();
+        const list=ordered(),i=list.indexOf(target);
+        if(i<0)return;
+        e.preventDefault();
+        if(target===customerBtn){
+            if(!field('customer_id').value){openCustomer(target);return;}
+            if(!isEditing && !field('so_number').readOnly){field('so_number').focus();return;}
+            field('so_date').focus();return;
+        }
+        if(target instanceof HTMLInputElement&&target.type==='date'&&!target.value){target.showPicker?.();return;}
+        if(i<list.length-1)list[i+1].focus();else form.requestSubmit();
     });
-    const rows=Array.from(document.querySelectorAll('[data-so-row]'));rows.forEach((row,i)=>row.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){e.preventDefault();rows[Math.min(i+1,rows.length-1)]?.focus();}else if(e.key==='ArrowUp'){e.preventDefault();rows[Math.max(0,i-1)]?.focus();}else if(e.key==='Enter'){e.preventDefault();row.querySelector('.edit-so')?.click();}}));
+
+    const rows=Array.from(document.querySelectorAll('[data-so-row]'));
+    rows.forEach((row,i)=>row.addEventListener('keydown',e=>{if(e.key==='ArrowDown'){e.preventDefault();rows[Math.min(i+1,rows.length-1)]?.focus();}else if(e.key==='ArrowUp'){e.preventDefault();rows[Math.max(0,i-1)]?.focus();}else if(e.key==='Enter'){e.preventDefault();row.querySelector('.edit-so')?.click();}}));
     document.addEventListener('keydown',e=>{if(e.defaultPrevented||e.target.closest?.('[role="dialog"]'))return;if(e.key==='Insert'&&modal.classList.contains('hidden')){e.preventDefault();openCreate(document.activeElement);}});
-    const filterBtn=document.getElementById('filterCustomerBtn'),filterId=document.getElementById('filterCustomerId');filterBtn.addEventListener('click',()=>MasterSelector.open({type:'customers',title:'Filter Customer',opener:filterBtn,allowAdd:false,onSelect:item=>{filterId.value=item.id;filterBtn.textContent=item.label||item.name;filterBtn.classList.remove('empty');setTimeout(()=>document.querySelector('#soFilterForm input[name=search]')?.focus(),20);}}));filterBtn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();filterBtn.click();}else if(e.key==='Backspace'){e.preventDefault();filterId.value='';filterBtn.textContent='Select Customer';filterBtn.classList.add('empty');}});
+
+    const filterBtn=document.getElementById('filterCustomerBtn'),filterId=document.getElementById('filterCustomerId');
+    filterBtn.addEventListener('click',()=>MasterSelector.open({type:'customers',title:'Filter Customer',opener:filterBtn,allowAdd:false,onSelect:item=>{filterId.value=item.id;filterBtn.textContent=item.label||item.name;filterBtn.classList.remove('empty');setTimeout(()=>document.querySelector('#soFilterForm input[name=search]')?.focus(),20);}}));
+    filterBtn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();filterBtn.click();}else if(e.key==='Backspace'){e.preventDefault();filterId.value='';filterBtn.textContent='Select Customer';filterBtn.classList.add('empty');}});
 });
 </script>
 @endpush

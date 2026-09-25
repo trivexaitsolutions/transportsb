@@ -36,6 +36,7 @@
     ];
     $companyName = $company?->name ?: $profile['name'];
     $companyGstNo = strtoupper(trim((string) ($company?->gst_no ?: $profile['gst_no'])));
+    $companyAddress = trim((string) ($company?->address ?: $profile['address']));
     $companyPan = strlen($companyGstNo) >= 12 ? substr($companyGstNo, 2, 10) : $profile['pan'];
 @endphp
 <div class="paper">
@@ -45,7 +46,7 @@
     @if($topMargin > 0)<div style="height:{{ $topMargin }}mm"></div>@endif
 
     @if($topMargin <= 0)
-        <div class="center"><div class="company-name">{{ $companyName }}</div><div class="tagline">{{ $profile['tagline'] }}</div><div class="company-meta">{{ $profile['address'] }} &nbsp;|&nbsp; Mob: {{ $profile['phone'] }} &nbsp;|&nbsp; {{ $profile['email'] }}</div><div class="company-meta">PAN: {{ $companyPan }} &nbsp;&nbsp; GST IN: {{ $companyGstNo ?: '-' }}</div></div><div class="rule"></div>
+        <div class="center"><div class="company-name">{{ $companyName }}</div><div class="tagline">{{ $profile['tagline'] }}</div><div class="company-meta">{{ $companyAddress }} &nbsp;|&nbsp; Mob: {{ $profile['phone'] }} &nbsp;|&nbsp; {{ $profile['email'] }}</div><div class="company-meta">PAN: {{ $companyPan }} &nbsp;&nbsp; GST IN: {{ $companyGstNo ?: '-' }}</div></div><div class="rule"></div>
     @endif
 
     <div class="invoice-title center">TAX INVOICE</div>

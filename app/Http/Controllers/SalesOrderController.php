@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use App\Models\SalesOrder;
+use App\Models\SoNumberSeries;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -24,7 +26,7 @@ class SalesOrderController extends Controller
         }
 
         $query = SalesOrder::query()
-            ->with(['customer:id,name,code,gst_no'])
+            ->with(['customer:id,name,code,gst_no,business_type'])
             ->withCount('vouchers');
 
         if ($search !== '') {
@@ -55,18 +57,113 @@ class SalesOrderController extends Controller
         return view('sale.orders.index', compact('items', 'search', 'customerId', 'selectedCustomer', 'status'));
     }
 
+    /**
+     * Preview only. This does not reserve or increment a number.
+     * The final number is assigned transactionally when Store succeeds.
+     */
+    public function numberPreview(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:customers,id'],
+        ]);
+
+        $customer = Customer::query()->findOrFail((int) $validated['customer_id']);
+
+        if ($this->isGovernmentCustomer($customer)) {
+            return response()->json([
+                'mode' => 'manual',
+                'series_type' => null,
+                'number' => null,
+                'message' => 'Government customer: enter the customer-provided SO number manually.',
+            ]);
+        }
+
+        $seriesType = $this->seriesTypeForCustomer($customer);
+        $series = SoNumberSeries::query()
+            ->where('series_type', $seriesType)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$series) {
+            return response()->json([
+                'mode' => 'unavailable',
+                'series_type' => $seriesType,
+                'number' => null,
+                'message' => ($seriesType === 'gst' ? 'GST Registered' : 'Non-GST').' SO Number Series is not configured or is inactive.',
+            ], 422);
+        }
+
+        [$candidate] = $this->nextAvailableSeriesNumber($series);
+
+        return response()->json([
+            'mode' => 'auto',
+            'series_type' => $seriesType,
+            'series_label' => $seriesType === 'gst' ? 'GST Registered' : 'Non-GST',
+            'number' => $candidate,
+            'message' => 'Preview only. The final number is reserved only when the SO is saved successfully.',
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
-        $data = $this->validated($request);
+        $request->validate([
+            'customer_id' => ['required', 'integer', 'exists:customers,id'],
+        ]);
+
+        $customer = Customer::query()->findOrFail($request->integer('customer_id'));
+        $manualNumber = $this->isGovernmentCustomer($customer);
+        $data = $this->validated($request, null, $manualNumber);
         $data['created_by'] = $request->user()?->id;
-        SalesOrder::query()->create($this->calculatedPayload($data));
+
+        try {
+            DB::transaction(function () use ($customer, $manualNumber, &$data) {
+                if ($manualNumber) {
+                    $data['so_number'] = $this->normaliseSoNumber($data['so_number'] ?? '');
+                    SalesOrder::query()->create($this->calculatedPayload($data));
+                    return;
+                }
+
+                $seriesType = $this->seriesTypeForCustomer($customer);
+                $series = SoNumberSeries::query()
+                    ->where('series_type', $seriesType)
+                    ->where('is_active', true)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$series) {
+                    throw ValidationException::withMessages([
+                        'so_number' => ($seriesType === 'gst' ? 'GST Registered' : 'Non-GST').' SO Number Series is not configured or is inactive.',
+                    ]);
+                }
+
+                [$candidate, $usedNumber] = $this->nextAvailableSeriesNumber($series);
+                $data['so_number'] = $candidate;
+
+                SalesOrder::query()->create($this->calculatedPayload($data));
+
+                // Number is consumed only after the SO insert succeeds. If anything fails,
+                // the DB transaction rolls back both the SO and this increment.
+                $series->next_number = $usedNumber + 1;
+                $series->save();
+            });
+        } catch (QueryException $e) {
+            $message = strtolower($e->getMessage());
+            if (str_contains($message, 'duplicate') || str_contains($message, 'unique')) {
+                throw ValidationException::withMessages([
+                    'so_number' => 'This SO Number already exists. Please try again.',
+                ]);
+            }
+            throw $e;
+        }
 
         return back()->with('success', 'Sales Order created successfully.');
     }
 
     public function update(Request $request, SalesOrder $salesOrder): RedirectResponse
     {
-        $data = $this->validated($request, $salesOrder->id);
+        // Existing SO number is intentionally immutable on edit.
+        $data = $this->validated($request, $salesOrder->id, false);
+        $data['so_number'] = $salesOrder->so_number;
         $usedTrips = $salesOrder->vouchers()->count();
 
         if ((int) $data['trips_quantity'] < $usedTrips) {
@@ -146,7 +243,7 @@ class SalesOrderController extends Controller
         return response()->json(['items' => $items]);
     }
 
-    private function validated(Request $request, ?int $id = null): array
+    private function validated(Request $request, ?int $id = null, bool $manualSoNumber = true): array
     {
         $requestedMode = strtolower(trim($request->string('tax_mode')->toString()));
         if (! in_array($requestedMode, ['rcm', 'hiring', 'gst', 'na'], true)) {
@@ -155,12 +252,16 @@ class SalesOrderController extends Controller
         }
 
         $request->merge([
-            'so_number' => strtoupper(trim($request->string('so_number')->toString())),
+            'so_number' => $this->normaliseSoNumber($request->string('so_number')->toString()),
             'tax_mode' => $requestedMode,
         ]);
 
+        $soNumberRules = $manualSoNumber
+            ? ['required', 'string', 'max:150', Rule::unique('sales_orders', 'so_number')->ignore($id)]
+            : ['nullable', 'string', 'max:150'];
+
         $data = $request->validate([
-            'so_number' => ['required', 'string', 'max:150', Rule::unique('sales_orders', 'so_number')->ignore($id)],
+            'so_number' => $soNumberRules,
             'so_date' => ['required', 'date'],
             'customer_id' => ['required', 'integer', 'exists:customers,id'],
             'from_location' => ['required', 'string', 'max:180'],
@@ -174,6 +275,7 @@ class SalesOrderController extends Controller
             'is_active' => ['nullable', 'boolean'],
         ]);
         $data['is_active'] = $request->boolean('is_active');
+
         return $data;
     }
 
@@ -186,9 +288,9 @@ class SalesOrderController extends Controller
             $requestedRate = (float) ($data['gst_rate'] ?? 0);
             $rate = in_array((int) round($requestedRate), [5, 12, 18], true) ? (float) ((int) round($requestedRate)) : 5.0;
         } else {
-            // RCM and NA do not add normal GST to the invoice total.
             $rate = 0.0;
         }
+
         $trips = (int) $data['trips_quantity'];
         $perTrip = (float) $data['per_trip_cost'];
         $value = round($trips * $perTrip, 2);
@@ -196,7 +298,7 @@ class SalesOrderController extends Controller
         $other = round((float) ($data['other_charges'] ?? 0), 2);
 
         return [
-            'so_number' => strtoupper(trim($data['so_number'])),
+            'so_number' => $this->normaliseSoNumber($data['so_number']),
             'so_date' => $data['so_date'],
             'customer_id' => $data['customer_id'],
             'from_location' => trim($data['from_location']),
@@ -214,5 +316,39 @@ class SalesOrderController extends Controller
             'is_active' => (bool) ($data['is_active'] ?? false),
             ...array_filter(['created_by' => $data['created_by'] ?? null], fn ($v) => $v !== null),
         ];
+    }
+
+    private function isGovernmentCustomer(Customer $customer): bool
+    {
+        return strtolower(trim((string) $customer->business_type)) === 'government';
+    }
+
+    private function seriesTypeForCustomer(Customer $customer): string
+    {
+        return filled(trim((string) $customer->gst_no)) ? 'gst' : 'non_gst';
+    }
+
+    /** @return array{0:string,1:int} */
+    private function nextAvailableSeriesNumber(SoNumberSeries $series): array
+    {
+        $number = max(1, (int) $series->next_number);
+
+        // If Next Number was manually moved backwards in the master, safely skip
+        // already-used SO numbers instead of producing a duplicate.
+        for ($attempt = 0; $attempt < 100000; $attempt++, $number++) {
+            $candidate = $this->normaliseSoNumber($series->formatNumber($number));
+            if (!SalesOrder::query()->where('so_number', $candidate)->exists()) {
+                return [$candidate, $number];
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'so_number' => 'Unable to find an unused SO Number in this series. Please review the Series Master.',
+        ]);
+    }
+
+    private function normaliseSoNumber(string $value): string
+    {
+        return strtoupper(trim($value));
     }
 }

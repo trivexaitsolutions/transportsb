@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Bank;
 use App\Models\BankTransaction;
+use App\Models\CashTransaction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,11 @@ class BankTransactionController extends Controller
             [$fromDate, $toDate] = [$toDate, $fromDate];
         }
 
-        $banks = Bank::query()->with('transportName:id,name')->orderBy('name')->get(['id', 'transport_name_id', 'name', 'opening_balance', 'is_active', 'is_default']);
+        $banks = Bank::query()
+            ->with('company:id,name')
+            ->orderBy('company_id')
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name', 'opening_balance', 'is_active']);
         $activeBanks = $banks->where('is_active', true)->values();
         $bankId = $request->integer('bank_id') ?: null;
 
@@ -75,7 +80,7 @@ class BankTransactionController extends Controller
                     'transaction_date' => $transaction->transaction_date?->format('d-m-Y'),
                     'type' => $transaction->type,
                     'particular' => match ($transaction->source_type) {
-                        'customer_party_payment' => 'Customer Receipt',
+                        'customer_party_payment' => 'Customer Payment',
                         'supplier_party_payment' => 'Supplier Payment',
                         default => $transaction->type === 'deposit' ? 'Deposit' : 'Withdrawal',
                     },
@@ -113,17 +118,41 @@ class BankTransactionController extends Controller
             'type' => ['required', Rule::in(['deposit', 'withdraw'])],
             'amount' => ['required', 'numeric', 'gt:0'],
             'remarks' => ['nullable', 'string', 'max:500'],
+            'affect_cash_in_hand' => ['nullable', 'boolean'],
         ]);
 
         DB::transaction(function () use ($request, $validated) {
-            BankTransaction::query()->create([
+            $affectCash = $request->boolean('affect_cash_in_hand');
+            $bank = Bank::query()->with('company:id,name')->findOrFail((int) $validated['bank_id']);
+            $remarks = $this->nullableText($validated['remarks'] ?? null);
+
+            $transaction = BankTransaction::query()->create([
                 'bank_id' => (int) $validated['bank_id'],
                 'transaction_date' => $validated['transaction_date'],
                 'type' => $validated['type'],
                 'amount' => round((float) $validated['amount'], 2),
-                'remarks' => $this->nullableText($validated['remarks'] ?? null),
+                'remarks' => $remarks,
+                'affect_cash_in_hand' => $affectCash,
                 'created_by' => $request->user()?->id,
             ]);
+
+            if ($affectCash) {
+                CashTransaction::query()->create([
+                    'transaction_date' => $validated['transaction_date'],
+                    // Bank Deposit = cash leaves Cash in Hand.
+                    // Bank Withdrawal = cash comes into Cash in Hand.
+                    'type' => $validated['type'] === 'deposit' ? 'withdraw' : 'deposit',
+                    'amount' => round((float) $validated['amount'], 2),
+                    'remarks' => trim(
+                        ($validated['type'] === 'deposit' ? 'Bank Deposit' : 'Bank Withdrawal')
+                        .' · '.($bank->company?->name ? $bank->company->name.' · ' : '').$bank->name
+                        .($remarks ? ' · '.$remarks : '')
+                    ),
+                    'source_type' => 'bank_transaction',
+                    'source_id' => $transaction->id,
+                    'created_by' => $request->user()?->id,
+                ]);
+            }
         });
 
         return redirect()->route('payments.bank.index', [
@@ -139,7 +168,14 @@ class BankTransactionController extends Controller
             return back()->with('error', 'This bank entry was created from a Customer/Supplier Payment. Change or delete it from the Payment page.');
         }
 
-        $transaction->delete();
+        DB::transaction(function () use ($transaction) {
+            CashTransaction::query()
+                ->where('source_type', 'bank_transaction')
+                ->where('source_id', $transaction->id)
+                ->delete();
+
+            $transaction->delete();
+        });
 
         return back()->with('success', 'Bank transaction deleted successfully.');
     }

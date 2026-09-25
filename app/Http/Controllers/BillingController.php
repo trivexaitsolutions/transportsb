@@ -103,7 +103,7 @@ class BillingController extends Controller
 
             $tripQuery = Voucher::query()
                 ->with([
-                    'transportName:id,name', 'vehicleType:id,name', 'supplier:id,name',
+                    'company:id,name,gst_no,address', 'vehicleType:id,name', 'supplier:id,name',
                     'invoiceItem.invoiceBatch:id,bill_no,invoice_date',
                     'attachments:id,voucher_id,original_name,mime_type,file_size',
                 ]);
@@ -177,7 +177,8 @@ class BillingController extends Controller
                     'lr_no' => $v->lr_no,
                     'lorry_number' => $v->lorry_number,
                     'vehicle_type' => $v->vehicleType?->name,
-                    'transport_name' => $v->transportName?->name,
+                    'company_name' => $v->company?->name,
+                    'transport_name' => $v->company?->name,
                     'supplier' => $v->supplier?->name,
                     'description' => $v->description,
                     'other_charges' => (float) $v->other_charges,
@@ -487,21 +488,21 @@ class BillingController extends Controller
     {
         $invoice->load([
             'customer', 'salesOrder',
-            'items.voucher.transportName', 'items.voucher.vehicleType', 'items.voucher.supplier',
+            'items.voucher.company', 'items.voucher.vehicleType', 'items.voucher.supplier',
         ])->loadSum('payments as paid_amount', 'amount');
 
         // Billing currently allows the user to choose the voucher rows. As requested,
         // the invoice company is taken from the first selected voucher; the user is
         // responsible for selecting vouchers from only one company in a bill.
         $company = $invoice->items
-            ->map(fn ($item) => $item->voucher?->transportName)
+            ->map(fn ($item) => $item->voucher?->company)
             ->filter()
             ->first();
 
         $companyBank = null;
         if ($company) {
             $companyBank = Bank::query()
-                ->where('transport_name_id', $company->id)
+                ->where('company_id', $company->id)
                 ->where('is_active', true)
                 ->orderByDesc('is_default')
                 ->orderBy('id')

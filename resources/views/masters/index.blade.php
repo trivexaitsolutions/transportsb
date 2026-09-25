@@ -40,7 +40,7 @@
                     @elseif($type==='transport-names')
                         <td class="font-bold">{{ $item->name }}</td><td>{{ $item->gst_no ?: '-' }}</td><td><span class="font-bold {{ $item->is_active?'text-emerald-700':'text-slate-400' }}">{{ $item->is_active?'Active':'Inactive' }}</span></td>
                     @elseif($type==='banks')
-                        <td class="font-bold">{{ $item->transportName?->name ?: '-' }}</td>
+                        <td class="font-bold">{{ $item->company?->name ?: '-' }}</td>
                         <td class="font-bold">{{ $item->name }}</td>
                         <td>{{ $item->account_number ?: '-' }}</td>
                         <td>{{ $item->ifsc_code ?: '-' }}</td>

@@ -36,7 +36,7 @@ class VoucherController extends Controller
             ->with([
                 'salesOrder:id,so_number,customer_id,from_location,to_location,per_trip_cost,trips_quantity',
                 'salesOrder.customer:id,name,code',
-                'transportName:id,name',
+                'company:id,name,gst_no,address',
                 'vehicleType:id,name',
                 'supplier:id,name,code',
             ])
@@ -79,7 +79,9 @@ class VoucherController extends Controller
             'rows.*.id' => ['nullable', 'integer', 'distinct', 'exists:vouchers,id'],
             'rows.*.lr_date' => ['required', 'date_format:Y-m-d'],
             'rows.*.sales_order_id' => ['required', 'integer', 'exists:sales_orders,id'],
-            'rows.*.transport_name_id' => ['nullable', 'integer', 'exists:transport_names,id'],
+            'rows.*.company_id' => ['nullable', 'integer', 'exists:companies,id'],
+            // Temporary request alias for an old compiled Voucher view. It also points to companies.
+            'rows.*.transport_name_id' => ['nullable', 'integer', 'exists:companies,id'],
             'rows.*.lr_no' => ['nullable', 'string', 'max:100'],
             'rows.*.vehicle_type_id' => ['nullable', 'integer', 'exists:vehicle_types,id'],
             'rows.*.lorry_number' => ['nullable', 'string', 'max:100'],
@@ -95,6 +97,14 @@ class VoucherController extends Controller
         ]);
 
         foreach ($validated['rows'] ?? [] as $index => $row) {
+            $companyId = (int) ($row['company_id'] ?? $row['transport_name_id'] ?? 0);
+            if ($companyId <= 0) {
+                throw ValidationException::withMessages([
+                    'rows.'.$index.'.company_id' => 'Select Company.',
+                ]);
+            }
+            $validated['rows'][$index]['company_id'] = $companyId;
+
             if ($row['lr_date'] < $validated['from_date'] || $row['lr_date'] > $validated['to_date']) {
                 throw ValidationException::withMessages([
                     'rows.'.$index.'.lr_date' => 'LR Date must be within the selected From Date and To Date.',
@@ -142,7 +152,7 @@ class VoucherController extends Controller
                 $payload = [
                     'lr_date' => $row['lr_date'],
                     'sales_order_id' => $order->id,
-                    'transport_name_id' => $row['transport_name_id'] ?? null,
+                    'company_id' => (int) $row['company_id'],
                     'lr_no' => $this->text($row['lr_no'] ?? null),
                     'vehicle_type_id' => $row['vehicle_type_id'] ?? null,
                     'lorry_number' => (($lorry = $this->text($row['lorry_number'] ?? null)) !== null ? strtoupper($lorry) : null),
@@ -160,7 +170,7 @@ class VoucherController extends Controller
                 if ($voucher) {
                     $voucher->fill($payload);
                     if ($voucher->invoiceItem()->exists() && $voucher->isDirty([
-                        'lr_date', 'sales_order_id', 'transport_name_id', 'lr_no', 'vehicle_type_id',
+                        'lr_date', 'sales_order_id', 'company_id', 'lr_no', 'vehicle_type_id',
                         'lorry_number', 'supplier_id', 'other_charges', 'remarks', 'description',
                     ])) {
                         throw ValidationException::withMessages([
@@ -287,8 +297,11 @@ class VoucherController extends Controller
             'from_location' => $voucher->salesOrder?->from_location,
             'to_location' => $voucher->salesOrder?->to_location,
             'per_trip_cost' => (float) ($voucher->salesOrder?->per_trip_cost ?? 0),
-            'transport_name_id' => $voucher->transport_name_id,
-            'transport_name' => $voucher->transportName?->name,
+            'company_id' => $voucher->company_id,
+            'company_name' => $voucher->company?->name,
+            // Response aliases keep an old compiled view functional until its cache is cleared.
+            'transport_name_id' => $voucher->company_id,
+            'transport_name' => $voucher->company?->name,
             'lr_no' => $voucher->lr_no,
             'vehicle_type_id' => $voucher->vehicle_type_id,
             'vehicle_type_name' => $voucher->vehicleType?->name,

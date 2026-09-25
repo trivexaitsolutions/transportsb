@@ -15,6 +15,7 @@ class BankTransaction extends Model
         'remarks',
         'source_type',
         'source_id',
+        'affect_cash_in_hand',
         'created_by',
     ];
 
@@ -23,6 +24,7 @@ class BankTransaction extends Model
         return [
             'transaction_date' => 'date',
             'amount' => 'decimal:2',
+            'affect_cash_in_hand' => 'boolean',
         ];
     }
 

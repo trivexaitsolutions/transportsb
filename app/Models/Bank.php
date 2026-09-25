@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Bank extends Model
 {
     protected $fillable = [
-        'transport_name_id',
+        'company_id',
         'name',
         'account_holder_name',
         'account_number',
@@ -31,10 +31,11 @@ class Bank extends Model
         ];
     }
 
-    public function transportName(): BelongsTo
+    public function company(): BelongsTo
     {
-        return $this->belongsTo(TransportName::class);
+        return $this->belongsTo(Company::class);
     }
+
 
     public function transactions(): HasMany
     {

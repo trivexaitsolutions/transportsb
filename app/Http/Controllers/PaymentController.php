@@ -35,7 +35,7 @@ class PaymentController extends Controller
         $chequeStatusFilter = $this->filterChequeStatus($request->string('cheque_status')->toString());
 
         $query = SupplierPartyPayment::query()
-            ->with(['supplier:id,code,name', 'voucher:id,lr_no,sr_no', 'bank:id,name'])
+            ->with(['supplier:id,code,name', 'voucher:id,lr_no,sr_no', 'bank:id,name,company_id', 'bank.company:id,name'])
             ->whereBetween('payment_date', [$fromDate, $toDate])
             ->when($supplierId, fn ($q) => $q->where('supplier_id', $supplierId))
             ->when($modeFilter, fn ($q) => $q->whereRaw('LOWER(COALESCE(payment_mode, "")) = ?', [strtolower($modeFilter)]))
@@ -184,7 +184,7 @@ class PaymentController extends Controller
         $chequeStatusFilter = $this->filterChequeStatus($request->string('cheque_status')->toString());
 
         $query = CustomerPartyPayment::query()
-            ->with(['customer:id,code,name', 'invoiceBatch:id,bill_no', 'bank:id,name'])
+            ->with(['customer:id,code,name', 'invoiceBatch:id,bill_no', 'bank:id,name,company_id', 'bank.company:id,name'])
             ->whereBetween('payment_date', [$fromDate, $toDate])
             ->when($customerId, fn ($q) => $q->where('customer_id', $customerId))
             ->when($modeFilter, fn ($q) => $q->whereRaw('LOWER(COALESCE(payment_mode, "")) = ?', [strtolower($modeFilter)]))
@@ -255,7 +255,10 @@ class PaymentController extends Controller
             DB::transaction(function () use ($request, $validated, $paymentType, $attachment) {
                 $invoiceId = null;
                 $amount = round((float) $validated['amount'], 2);
-                $tdsPercent = $paymentType === 'on_account' ? round((float) ($validated['tds_percent'] ?? 0), 2) : 0.0;
+                // TDS is applicable for both On Account and Against Bill customer receipts.
+                // `amount` remains the gross settlement amount used in customer ledger / bill allocation.
+                // Only the actual Cash/Bank posting uses `net_amount`.
+                $tdsPercent = round((float) ($validated['tds_percent'] ?? 0), 2);
                 $tdsAmount = round($amount * $tdsPercent / 100, 2);
                 $netAmount = max(0, round($amount - $tdsAmount, 2));
                 if ($paymentType === 'against_bill') {
@@ -440,7 +443,12 @@ class PaymentController extends Controller
         ?string $modeFilter, ?string $chequeStatusFilter, string $storeRoute, string $indexRoute,
         string $attachmentRouteName, string $destroyRouteName, string $chequeStatusRouteName, array $extra): array
     {
-        $banks = Bank::query()->with('transportName:id,name')->where('is_active', true)->orderBy('name')->get(['id', 'transport_name_id', 'name']);
+        $banks = Bank::query()
+            ->with('company:id,name')
+            ->where('is_active', true)
+            ->orderBy('company_id')
+            ->orderBy('name')
+            ->get(['id', 'company_id', 'name']);
         return array_merge([
             'paymentType' => $paymentType, 'title' => $title, 'partyLabel' => $partyLabel, 'partyField' => $partyField,
             'partyRelation' => $partyRelation, 'parties' => $parties, 'payments' => $payments, 'banks' => $banks,

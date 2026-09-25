@@ -4,7 +4,7 @@
 
 @push('styles')
 <style>
-.bank-card{border:1px solid #cbd5e1;background:#fff}.bank-input{height:38px;width:100%;border:1px solid #94a3b8;background:#fff;padding:0 9px;outline:none;font-weight:700}.bank-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.bank-table{width:100%;border-collapse:collapse;font-size:12px}.bank-table th{background:#dfe7f1;border:1px solid #aebccd;padding:7px 8px;font-size:10px;font-weight:900;text-transform:uppercase}.bank-table td{border:1px solid #cbd5e1;padding:8px}.bank-table tbody tr:hover td{background:#f8fafc}.bank-num{text-align:right;font-variant-numeric:tabular-nums}.bank-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.bank-summary>div{border:1px solid #cbd5e1;background:#f8fafc;padding:10px}.bank-summary small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b}.bank-summary b{display:block;margin-top:2px;font-size:16px}.bank-modal{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:16px}.bank-modal.hidden{display:none!important}.bank-modal-card{width:min(680px,96vw);background:#fff;border:1px solid #64748b;box-shadow:0 24px 70px rgba(15,23,42,.35)}.bank-modal-head{display:flex;align-items:center;justify-content:space-between;background:#055b46;color:#fff;padding:11px 16px}.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bank-field label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.bank-field.full{grid-column:1/-1}.bank-btn{height:38px;border:1px solid #94a3b8;background:#fff;padding:0 14px;font-weight:900}.bank-btn.primary{border-color:#08765b;background:#08765b;color:#fff}.previous-row td{background:#fff9c4!important;font-weight:900}.balance-positive{color:#047857}.balance-negative{color:#b91c1c}.bank-empty{padding:45px 10px;text-align:center;color:#94a3b8;font-weight:700}@media(max-width:800px){.bank-summary{grid-template-columns:1fr 1fr}.bank-grid{grid-template-columns:1fr}.bank-field.full{grid-column:auto}}
+.bank-card{border:1px solid #cbd5e1;background:#fff}.bank-input{height:38px;width:100%;border:1px solid #94a3b8;background:#fff;padding:0 9px;outline:none;font-weight:700}.bank-input:focus{border-color:#047857;box-shadow:0 0 0 2px #d1fae5}.bank-table{width:100%;border-collapse:collapse;font-size:12px}.bank-table th{background:#dfe7f1;border:1px solid #aebccd;padding:7px 8px;font-size:10px;font-weight:900;text-transform:uppercase}.bank-table td{border:1px solid #cbd5e1;padding:8px}.bank-table tbody tr:hover td{background:#f8fafc}.bank-num{text-align:right;font-variant-numeric:tabular-nums}.bank-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.bank-summary>div{border:1px solid #cbd5e1;background:#f8fafc;padding:10px}.bank-summary small{display:block;font-size:10px;font-weight:900;text-transform:uppercase;color:#64748b}.bank-summary b{display:block;margin-top:2px;font-size:16px}.bank-modal{position:fixed;inset:0;z-index:230;background:rgba(15,23,42,.58);display:flex;align-items:center;justify-content:center;padding:16px}.bank-modal.hidden{display:none!important}.bank-modal-card{width:min(680px,96vw);background:#fff;border:1px solid #64748b;box-shadow:0 24px 70px rgba(15,23,42,.35)}.bank-modal-head{display:flex;align-items:center;justify-content:space-between;background:#055b46;color:#fff;padding:11px 16px}.bank-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.bank-field label{display:block;margin-bottom:4px;font-size:10px;font-weight:900;text-transform:uppercase;color:#475569}.bank-field.full{grid-column:1/-1}.cash-effect-box{grid-column:1/-1;display:flex;align-items:flex-start;gap:10px;border:1px solid #cbd5e1;background:#f8fafc;padding:10px 12px}.cash-effect-box input{width:18px;height:18px;margin-top:1px}.cash-effect-box b{display:block;font-size:12px}.cash-effect-box small{display:block;margin-top:2px;color:#64748b;font-weight:700}.bank-btn{height:38px;border:1px solid #94a3b8;background:#fff;padding:0 14px;font-weight:900}.bank-btn.primary{border-color:#08765b;background:#08765b;color:#fff}.previous-row td{background:#fff9c4!important;font-weight:900}.balance-positive{color:#047857}.balance-negative{color:#b91c1c}.bank-empty{padding:45px 10px;text-align:center;color:#94a3b8;font-weight:700}@media(max-width:800px){.bank-summary{grid-template-columns:1fr 1fr}.bank-grid{grid-template-columns:1fr}.bank-field.full{grid-column:auto}}
 </style>
 @endpush
 
@@ -25,7 +25,7 @@
             <select name="bank_id" class="bank-input">
                 <option value="">Select Bank</option>
                 @foreach($banks as $bank)
-                    <option value="{{ $bank->id }}" @selected((string)$bankId === (string)$bank->id)>{{ $bank->transportName?->name ? $bank->transportName->name.' · ' : '' }}{{ $bank->name }}{{ $bank->is_active ? '' : ' (Inactive)' }}</option>
+                    <option value="{{ $bank->id }}" @selected((string)$bankId === (string)$bank->id)>{{ $bank->name }}{{ $bank->is_active ? '' : ' (Inactive)' }}</option>
                 @endforeach
             </select>
         </label>
@@ -36,7 +36,7 @@
     @if($selectedBank)
     <div class="p-4">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <div><span class="text-xs font-black uppercase text-slate-500">Bank</span><div class="text-lg font-black">{{ $selectedBank->transportName?->name ? $selectedBank->transportName->name.' · ' : '' }}{{ $selectedBank->name }}</div></div>
+            <div><span class="text-xs font-black uppercase text-slate-500">Company / Bank</span><div class="text-lg font-black">{{ $selectedBank->company?->name ? $selectedBank->company->name.' · ' : '' }}{{ $selectedBank->name }}</div></div>
             <div class="text-right"><span class="text-xs font-black uppercase text-slate-500">Balance as on {{ \Carbon\Carbon::parse($toDate)->format('d-m-Y') }}</span><div class="text-xl font-black {{ $currentBalance < 0 ? 'balance-negative' : 'balance-positive' }}">₹{{ number_format($currentBalance,2) }}</div></div>
         </div>
 
@@ -87,13 +87,28 @@
                     <select id="transactionBank" name="bank_id" class="bank-input" required>
                         <option value="">Select Bank</option>
                         @foreach($activeBanks as $bank)
-                            <option value="{{ $bank->id }}" @selected((string)$defaultBankId === (string)$bank->id)>{{ $bank->transportName?->name ? $bank->transportName->name.' · ' : '' }}{{ $bank->name }}</option>
+                            <option value="{{ $bank->id }}" @selected((string)$defaultBankId === (string)$bank->id)>{{ $bank->company?->name ? $bank->company->name.' · ' : '' }}{{ $bank->name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="bank-field"><label for="transactionDate">Payment Date *</label><input id="transactionDate" type="date" name="transaction_date" value="{{ old('transaction_date', now()->toDateString()) }}" class="bank-input" required></div>
                 <div class="bank-field"><label for="transactionType">Type *</label><select id="transactionType" name="type" class="bank-input" required><option value="deposit" @selected(old('type','deposit')==='deposit')>Deposit</option><option value="withdraw" @selected(old('type')==='withdraw')>Withdraw</option></select></div>
                 <div class="bank-field"><label for="transactionAmount">Amount *</label><input id="transactionAmount" type="number" min="0.01" step="0.01" name="amount" value="{{ old('amount') }}" class="bank-input bank-num" placeholder="0.00" required></div>
+
+                <label class="cash-effect-box">
+                    <input
+                        id="affectCashInHand"
+                        type="checkbox"
+                        name="affect_cash_in_hand"
+                        value="1"
+                        @checked(old('affect_cash_in_hand', '1'))
+                    >
+                    <span>
+                        <b>Affect Cash in Hand</b>
+                        <small>Checked by default. Deposit reduces Cash in Hand; Withdrawal increases Cash in Hand.</small>
+                    </span>
+                </label>
+
                 <div class="bank-field full"><label for="transactionRemarks">Remarks</label><input id="transactionRemarks" name="remarks" value="{{ old('remarks') }}" maxlength="500" class="bank-input" autocomplete="off"></div>
             </div>
             <div class="mt-2 text-right text-xs font-semibold text-slate-500">Enter: Bank → Date → Type → Amount → Remarks → Save · Ctrl+S Save · Esc Close</div>
